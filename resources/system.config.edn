@@ -1,0 +1,15 @@
+{:nexus.system/env #profile {:dev #include "envs/dev.edn"
+                             :prod #include "envs/prod.edn"}
+
+ ;; Database
+ :nexus.db/spec {:url #ref [:nexus.system/env :db-url]}
+ :nexus.db/connection {:spec #ig/ref :nexus.db/spec}
+ :nexus.db/migrations {:connection #ig/ref :nexus.db/connection}
+
+ ;; HTTP Server
+ :nexus.server/handler {:options {:hot-reload? #profile {:dev true
+                                                         :prod false}}
+                        :deps {:db #ig/ref :nexus.db/connection}}
+ :nexus.server/server {:options {:port #ref [:nexus.system/env :port]}
+                       :deps {:db #ig/ref :nexus.db/connection
+                              :handler #ig/ref :nexus.server/handler}}}

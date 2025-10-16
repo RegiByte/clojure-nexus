@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', "sh -c 'pg_isready -U postgres -d postgres'"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=nexus
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    ports:
+      - 5436:5432
