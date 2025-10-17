@@ -1,4 +1,5 @@
-{:nexus.system/env #profile {:dev #include "envs/dev.edn"
+{;; Environment 
+ :nexus.system/env #profile {:dev #include "envs/dev.edn"
                              :prod #include "envs/prod.edn"}
 
  ;; Database
@@ -6,10 +7,18 @@
  :nexus.db/connection {:spec #ig/ref :nexus.db/spec}
  :nexus.db/migrations {:connection #ig/ref :nexus.db/connection}
 
+ ;; Services
+ ;; :nexus.services/users {:db #ig/ref :nexus.db/connection}
+
  ;; HTTP Server
- :nexus.server/handler {:options {:hot-reload? #profile {:dev true
-                                                         :prod false}}
-                        :deps {:db #ig/ref :nexus.db/connection}}
+ :nexus.server/app {:options {:hot-reload? #profile {:dev true
+                                                     :prod false}
+                              :cors-mode #profile {:dev :dev
+                                                   :prod :prod}}
+                    :deps {:db #ig/ref :nexus.db/connection
+                           ;; Future: :users-service #ig/ref :nexus.services/users 
+                           }}
  :nexus.server/server {:options {:port #ref [:nexus.system/env :port]}
-                       :deps {:db #ig/ref :nexus.db/connection
-                              :handler #ig/ref :nexus.server/handler}}}
+                       :deps {:app #ig/ref :nexus.server/app}}
+ ;;
+ }

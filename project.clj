@@ -12,6 +12,8 @@
 
                  ;; Validation
                  [metosin/malli "0.17.0"]
+                 ;; Json
+                 [metosin/jsonista "0.3.13"]
 
                  ;; Database
                  [org.postgresql/postgresql "42.7.5"]
@@ -26,10 +28,11 @@
                  [org.slf4j/slf4j-api "2.1.0-alpha1"]
 
                  ;; Routing
+                 [ring-cors "0.1.13"]
                  [metosin/reitit "0.7.2"]
                  [metosin/ring-http-response "0.9.5"]
-                 [ring/ring-core "2.0.0-alpha1"]
-                 [ring/ring-jetty-adapter "2.0.0-alpha1"]]
+                 [ring/ring-core "1.15.3"]
+                 [ring/ring-jetty-adapter "1.15.3"]]
   :main ^:skip-aot nexus.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all

@@ -3,6 +3,7 @@
             [integrant.repl :as ig-repl]
             [integrant.repl.state :as ig-state]
             [migratus.core :as migratus]
+            [reitit.core :as reitit]
             [taoensso.telemere :as tel] ; Use telemery as default logger
             [next.jdbc :as jdbc]))
 
@@ -42,6 +43,12 @@
   "The current system configuration used by Integrant"
   []
   ig-state/config)
+
+(defn router
+  []
+  (let [router-fn (get-in (system) [:nexus.server/app :get-router])]
+    (when router-fn
+      (router-fn))))
 ;; Acessors
 
 
@@ -78,6 +85,7 @@
   (system:config)
   (connection)
   (migrations)
+  (router)
   ;; Common acessors
   )
 
@@ -127,5 +135,8 @@
       FROM pg_tables 
       WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'public')
       ORDER BY schemaname, tablename"])
+  
+  ;; Get route from router
+  (reitit/match-by-path (router) "/api/health")
   ;; Experiments
   )
