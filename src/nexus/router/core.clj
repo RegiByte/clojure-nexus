@@ -10,10 +10,9 @@
   [["/health" {:get {:handler (reply "Healthy bro!!!")}}]
    ["/hello" {:get {:handler (reply "Hello from API")}}]
    ["/crash" {:get {:handler (fn [_request]
+                               (throw (ex-info "Purposely crashed from route" {:exception-info :nothing?}))
                                {:status 200
-                                :body {
-                                       :message "Should crash bro"
-                                }})}}]
+                                :body {:message "Should crash bro"}})}}]
    ;
    ])
 

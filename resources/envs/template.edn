@@ -1,2 +1,4 @@
-{:db-url #env DB_URL
- :port #long #or [#env PORT 80]}
+;; Note: Copy this file to dev.edn and change the config to suite your needs
+{:db-url "postgres://postgres:postgres@localhost:5436/nexus" ; follows docker url
+ :port 3456 ; server port
+ }
