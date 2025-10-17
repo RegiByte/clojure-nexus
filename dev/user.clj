@@ -26,6 +26,10 @@
   "The running system configuration"
   []
   ig-state/system)
+(defn system:config
+  "The current system configuration used by Integrant"
+  []
+  ig-state/config)
 (defn connection
   "Returns the database connection"
   []
@@ -37,16 +41,10 @@
 (defn server:handler
   "Returns the server handler"
   []
-  (:nexus.server/handler (system)))
-
-(defn system:config
-  "The current system configuration used by Integrant"
+  (-> (:nexus.server/app (system)) :handler))
+(defn server:router
   []
-  ig-state/config)
-
-(defn router
-  []
-  (let [router-fn (get-in (system) [:nexus.server/app :get-router])]
+  (let [router-fn (-> (system) :nexus.server/app :get-router)]
     (when router-fn
       (router-fn))))
 ;; Acessors
@@ -85,7 +83,8 @@
   (system:config)
   (connection)
   (migrations)
-  (router)
+  (server:handler)
+  (server:router)
   ;; Common acessors
   )
 
@@ -106,6 +105,7 @@
 (comment
   ;; Experiments
   ; Poke the handler with a raw "request map"
+  (server:handler)
   ((server:handler) {:ring.request/headers {}
                      :request-method :get
                      :uri "/hello/amandinha!"
@@ -135,8 +135,9 @@
       FROM pg_tables 
       WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'public')
       ORDER BY schemaname, tablename"])
-  
+
   ;; Get route from router
-  (reitit/match-by-path (router) "/api/health")
+  (server:router)
+  (reitit/match-by-path (server:router) "/api/health")
   ;; Experiments
   )
