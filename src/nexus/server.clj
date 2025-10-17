@@ -22,9 +22,6 @@
 
 (defn exception-handler [message {:keys [show-error-stacks?]}]
   (fn [exception request]
-    (tap> request)
-    (println "show stack" show-error-stacks?)
-    (println "Exception caught here!" request exception)
     (tel/error! exception message)
     (-> {:status 500
          :body {:message message
