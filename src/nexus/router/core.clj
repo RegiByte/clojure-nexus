@@ -1,4 +1,6 @@
-(ns nexus.router.core)
+(ns nexus.router.core
+  (:require
+   [jsonista.core :as jsonista]))
 
 (defn reply [msg]
   (fn [_request]
@@ -19,13 +21,17 @@
 (defn web-routes
   " Returns the application web routes, thing acessible to users and such "
   []
-  [["/" {:get {:handler ; Homepage route 
+  [["/" {:name :homepage
+         :get {:handler ; Homepage route 
                (reply " Hello From homepage.")}}]
-   ["/hello/:name" {:get {:handler (fn [request]
-                                     (tap> request)
-                                     {:status 200
-                                      :headers {"Content-Type" "text/html"}
-                                      :body (str "Hey " (-> request :path-params :name) "! how are you?")})}}]]
+   ["/hello/:name"
+    {:name :hello
+     :get {:handler (fn [request]
+                      (tap> request)
+                      {:status 200
+                       :headers {"Content-Type" "text/html"
+                                 :x-original-params (jsonista/write-value-as-string (:query-params request))}
+                       :body (str "Hey " (-> request :path-params :name) "! how are you?")})}}]]
   ; End Web Routes
   )
 

@@ -1,11 +1,13 @@
 (ns user
-  (:require [nexus.system :as system]
-            [integrant.repl :as ig-repl]
-            [integrant.repl.state :as ig-state]
-            [migratus.core :as migratus]
-            [reitit.core :as reitit]
-            [taoensso.telemere :as tel] ; Use telemery as default logger
-            [next.jdbc :as jdbc]))
+  (:require
+   [integrant.repl :as ig-repl]
+   [integrant.repl.state :as ig-state]
+   [migratus.core :as migratus]
+   [next.jdbc :as jdbc]
+   [nexus.system :as system]
+   [reitit.core :as reitit]
+   [taoensso.telemere :as tel] ; Use telemery as default logger
+   ))
 
 
 (do
@@ -108,7 +110,7 @@
   (server:handler)
   ((server:handler) {:ring.request/headers {}
                      :request-method :get
-                     :uri "/hello/amandinha!"
+                     :uri "/hello/world!"
                      :query-params {:foo "bar"}})
 
   ; Load config and respective namespaces
@@ -139,5 +141,64 @@
   ;; Get route from router
   (server:router)
   (reitit/match-by-path (server:router) "/api/health")
+
+  (reitit/routes (server:router))
+  (reitit/route-names (server:router))
+
+
+  ;; Name based routing
+  (let [match (reitit/match-by-name (server:router) :homepage {})]
+    (-> match reitit/match->path))
+
+  (let [match (reitit/match-by-name (server:router) :hello {:name "world"})]
+    (-> match reitit/match->path))
+
+
   ;; Experiments
   )
+
+
+
+(defn url-for
+  ([router route-name]
+   (url-for router route-name nil))
+  ([router route-name params]
+   (url-for router route-name params nil))
+  ([router route-name params query-params]
+   (try
+     (-> router
+         (reitit/match-by-name route-name params)
+         (reitit/match->path query-params))
+     (catch java.lang.IllegalArgumentException _e
+       nil))))
+
+(defn url-route
+  [router url]
+  (-> router
+      (reitit/match-by-path url)))
+
+(defn constantemente
+  "Retorna uma função que constantemente retorna o mesmo valor passado como input.
+   Independente de quantos argumentos sejam passados para a função resultante."
+  
+  [x] (fn [& args] x))
+
+
+(comment ;; Testing helper
+  (url-for (server:router) :homepage)
+  (url-for (server:router) :hello {:name "world"})
+  (url-for (server:router) :hello {:name "world"} {:foo "bar"})
+  (url-for (server:router) :hellos {:name "world"} {:foo "bar"})
+
+
+  (url-route (server:router) "/hello/regi?foo=bar")
+  (url-route (server:router) "/api/health")
+
+
+  ((constantly "Hi there") 1 2 3 4 5 6)
+  ((constantemente "Hi there! Now with my impl of constantly") 1 2 3 4 5 6)
+
+  ;
+  )
+
+

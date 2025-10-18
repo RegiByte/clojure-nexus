@@ -76,13 +76,14 @@
              router
              (ring/routes
               (ring/redirect-trailing-slash-handler)
-              (ring/create-resource-handler {:path "/static"})
+              (ring/create-resource-handler {:root "public"
+                                             :path "/static"})
               (ring/create-default-handler {:not-found #'not-found-handler})))
 
     ; Cors must wrap the entire ring handler, instead of being a reitit middleware
     wrapped-handler (cors/wrap-cors handler
                                     :access-control-allow-origin (:origins cors-cfg)
-                                    :access-control-allow-methods [:get :put :post :delete :patch :options]
+                                    :access-control-allow-methods [:get :post :put :delete :patch :options]
                                     :access-control-allow-credentials (:allow-credentials cors-cfg)
                                     :access-control-allow-headers ["Content-Type" "Authorization"])]
     {:router router
