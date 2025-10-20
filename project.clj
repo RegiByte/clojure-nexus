@@ -3,6 +3,11 @@
   :url "https://github.com/RegiByte/clojure-nexus"
   :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
             :url "https://www.eclipse.org/legal/epl-2.0/"}
+
+  :source-paths ["src/clj"]
+
+  :plugins [[lein-shell "0.5.0"]]
+
   :dependencies [; Clojure
                  [org.clojure/clojure "1.11.1"]
 
@@ -18,7 +23,7 @@
                  ;; Database
                  [org.postgresql/postgresql "42.7.5"]
                  [com.zaxxer/HikariCP "6.2.1"]
-                 [com.github.seancorfield/next.jdbc "1.3.981"]
+                 [com.github.seancorfield/next.jdbc "1.3.1070"]
                  [com.github.seancorfield/honeysql "2.6.1270"]
                  [migratus "1.6.3"]
 
@@ -35,9 +40,19 @@
                  [ring/ring-jetty-adapter "1.15.3"]]
   :main ^:skip-aot nexus.core
   :target-path "target/%s"
+
+  :aliases {"build-frontend" ["shell" "npm" "run" "build"]
+            "uberjar-full" ["do" ["build-frontend"] ["uberjar"]]}
+
   :profiles {:uberjar {:aot :all
                        :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}
              :dev {:source-paths ["dev"]
                    :dependencies [[integrant/repl "0.3.3"]
-                                  [djblue/portal "0.61.0"]]
-                   :repl-options {:init-ns user}}})
+                                  [djblue/portal "0.61.0"]
+                                  [binaryage/devtools "1.0.7"]]
+                   :repl-options {:init-ns user}}
+             :cljs {:source-paths ["src/cljs"]
+                    :dependencies [;; ClojureScript dev deps
+                                   [thheller/shadow-cljs "2.28.17"]
+                                   [reagent "1.2.0"]
+                                   [re-frame "1.4.3"]]}})

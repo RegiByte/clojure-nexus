@@ -2,12 +2,33 @@
   (:require
    [clojure.set :as set]
    [integrant.core :as ig]
+   [honey.sql :as honey]
    [next.jdbc :as jdbc]
+   [next.jdbc.result-set :as jdbc-rs]
    [next.jdbc.connection :as connection]
    [taoensso.telemere :as tel])
   (:import
    (com.zaxxer.hikari HikariDataSource)))
 
+; Common functions
+
+(def ^:private sql-params
+  {:builder-fn jdbc-rs/as-maps})
+
+(defn format-sql [query]
+  (honey/format query {:quoted true}))
+
+(defn exec!
+  "Send query to db and return vector of result items."
+  [db query]
+  (let [query-sql (format-sql query)]
+    (jdbc/execute! db query-sql sql-params)))
+
+(defn exec-one!
+  "Send query to db and return single result item."
+  [db query]
+  (let [query-sql (format-sql query)]
+    (jdbc/execute-one! db query-sql sql-params)))
 
 ;; Turns a simple url into a db spec map
 ;; e.g 

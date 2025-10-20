@@ -22,3 +22,9 @@ pom.xml.asc
 .idea/
 
 .DS_Store
+
+# Shadow-CLJS
+.shadow-cljs/
+node_modules/
+resources/public/js/
+.nrepl-port

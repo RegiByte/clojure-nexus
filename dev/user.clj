@@ -1,9 +1,13 @@
 (ns user
   (:require
+   [camel-snake-kebab.core :as csk]
+   [honey.sql :as honey]
    [integrant.repl :as ig-repl]
    [integrant.repl.state :as ig-state]
    [migratus.core :as migratus]
    [next.jdbc :as jdbc]
+   [nexus.db :as db]
+   [nexus.router.helpers :as rh]
    [nexus.system :as system]
    [reitit.core :as reitit]
    [taoensso.telemere :as tel] ; Use telemery as default logger
@@ -49,6 +53,10 @@
   (let [router-fn (-> (system) :nexus.server/app :get-router)]
     (when router-fn
       (router-fn))))
+
+(defn services:users
+  []
+  (:nexus.services/users (system)))
 ;; Acessors
 
 
@@ -87,6 +95,9 @@
   (migrations)
   (server:handler)
   (server:router)
+  (services:users)
+
+  ((:some-method (services:users)) "hi there!")
   ;; Common acessors
   )
 
@@ -127,6 +138,8 @@
   (jdbc/execute! (connection) ["SELECT 1 AS id"])
   (jdbc/execute! (connection) ["SELECT 1 AS id"])
 
+
+
   ;; List all tables in nexus schema
   (jdbc/execute! (connection)
                  ["SELECT tablename FROM pg_tables WHERE schemaname = ?" "nexus"])
@@ -159,46 +172,109 @@
 
 
 
-(defn url-for
-  ([router route-name]
-   (url-for router route-name nil))
-  ([router route-name params]
-   (url-for router route-name params nil))
-  ([router route-name params query-params]
-   (try
-     (-> router
-         (reitit/match-by-name route-name params)
-         (reitit/match->path query-params))
-     (catch java.lang.IllegalArgumentException _e
-       nil))))
-
-(defn url-route
-  [router url]
-  (-> router
-      (reitit/match-by-path url)))
-
-(defn constantemente
-  "Retorna uma função que constantemente retorna o mesmo valor passado como input.
-   Independente de quantos argumentos sejam passados para a função resultante."
-  
-  [x] (fn [& args] x))
-
-
 (comment ;; Testing helper
-  (url-for (server:router) :homepage)
-  (url-for (server:router) :hello {:name "world"})
-  (url-for (server:router) :hello {:name "world"} {:foo "bar"})
-  (url-for (server:router) :hellos {:name "world"} {:foo "bar"})
+  (rh/named-url (server:router) :homepage)
+  (rh/named-url (server:router) :hello {:name "world"})
+  (rh/named-url (server:router) :hello {:name "world"} {:foo "bar"})
+  (rh/named-url (server:router) :hellos {:name "world"} {:foo "bar"})
 
 
-  (url-route (server:router) "/hello/regi?foo=bar")
-  (url-route (server:router) "/api/health")
+  (rh/url->route (server:router) "/hello/regi?foo=bar")
 
+  (rh/url->route (server:router) "/hello/:name")
+  (rh/url->route (server:router) "/api/health")
 
-  ((constantly "Hi there") 1 2 3 4 5 6)
-  ((constantemente "Hi there! Now with my impl of constantly") 1 2 3 4 5 6)
 
   ;
   )
 
+
+(comment
+
+  (csk/->Camel_Snake_Case "hello world")
+
+  (db/format-sql {:select [:*]
+                  :from :foo.bar})
+
+  (db/format-sql {:select [:*]
+                  :from :nexus.users
+                  :where [:and [:= :name "regi"] [:= :age "20"]]})
+
+  (db/format-sql {:insert-into [:nexus.users]
+                  :values [{:first_name "regi"
+                            :last_name "junior"
+                            :middle_name "cunha"
+                            :email "regi@email.com"}]})
+
+  (honey/format {:insert-into [:nexus.users]
+                 :values [{:first-name "regi"
+                           :last-name nil
+                           :middle-name "cunha"
+                           :email "regi@email.com"}]})
+
+  (defn create-user [db {:keys [first-name last-name middle-name email]}]
+    (db/exec-one! db {:insert-into [:nexus.users]
+                      :values [{:first_name first-name
+                                :last_name last-name
+                                :middle_name middle-name
+                                :email email}]}))
+
+  (create-user (connection) {:first-name "Regi"
+                             :last-name "Byte"
+                             :middle-name "nice!"
+                             :email "some.email+2@example.com"})
+
+  (-> (services:users)
+      :create
+      (apply [{:first-name "Test"
+               :last-name "User"
+               :email "test.user@email.com"}]))
+  
+  ((:create (services:users)) {:first-name "Test"
+                               :last-name "User"
+                               :email "test.user+1@email.com"})
+  
+  (-> (services:users)
+      :find-by-email
+      (apply ["some.email+2@example.com"]))
+
+  (defn find-user-by-email [db email]
+    (db/exec-one! db {:select [:*]
+                      :from :nexus.users
+                      :where [:= :email email]}))
+
+  (db/exec! (connection) {:insert-into [:nexus.users]
+                          :values [{:first_name "amanda"
+                                    :last_name "machado"
+                                    :middle_name "princesa"
+                                    :email "amanda2@email.com"}]})
+
+  (find-user-by-email (connection) "amanda2@email.com")
+
+  (honey/format {:where [:= nil :middle-name]})
+
+  (defn find-users-where [db where]
+    (db/exec! db {:select [:*]
+                  :from :nexus.users
+                  :where where}))
+
+  (find-users-where (connection) [:not [:= nil :middle_name]])
+
+
+  (connection)
+  (db/exec! (connection) {:select [:*]
+                          :from :nexus.users})
+
+  (defn fn-with-doc
+    "This function has docstrings"
+    [a b]
+    nil)
+
+  (doc fn-with-doc)
+
+  (def fn-partial (partial fn-with-doc 1))
+  (doc fn-partial)
+  (fn-partial 2)
+  ;
+  )
 

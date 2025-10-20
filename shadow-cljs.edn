@@ -1,0 +1,13 @@
+{:lein {:profile "+cljs"}
+
+ ;; :dependencies [[reagent "1.2.0"]
+ ;;               [re-frame "1.4.3"]]
+
+ :builds
+ {:app {:target :browser
+        :output-dir "resources/public/js"
+        :asset-path "/js"
+        :modules {:main {:init-fn nexus.app.core/init!}}
+
+        :devtools {;; :preloads [devtools.preload]
+                   :after-load nexus.app.core/reload!}}}}

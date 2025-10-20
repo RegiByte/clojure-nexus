@@ -8,7 +8,7 @@
  :nexus.db/migrations {:connection #ig/ref :nexus.db/connection}
 
  ;; Services
- ;; :nexus.services/users {:db #ig/ref :nexus.db/connection}
+ :nexus.services/users {:deps {:db #ig/ref :nexus.db/connection}}
 
  ;; HTTP Server
  :nexus.server/app {:options {:hot-reload? #profile {:dev true
@@ -16,8 +16,7 @@
                               :cors-mode #profile {:dev :dev
                                                    :prod :prod}
                               :show-error-stacks? #profile {:dev true
-                                                            :prod false}
-                              }
+                                                            :prod false}}
                     :deps {:db #ig/ref :nexus.db/connection
                            ;; Future: :users-service #ig/ref :nexus.services/users 
                            }}
