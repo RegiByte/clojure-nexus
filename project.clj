@@ -10,6 +10,7 @@
 
   :dependencies [; Clojure
                  [org.clojure/clojure "1.11.1"]
+                 [org.clojure/core.async "1.8.741"]
 
                  ;; System
                  [aero "1.1.6"]
