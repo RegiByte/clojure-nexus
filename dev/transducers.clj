@@ -1,4 +1,7 @@
-(ns transducers)
+(ns transducers
+  (:require
+   [clojure.core.async :as async]
+   [clojure.string :as str]))
 
 ;; Let's start with a framework of thinking
 ;; A reduction process (e.g reduce) is like
@@ -35,7 +38,6 @@
   (defn machine-1 [msg]
     (fn [next-machine] ; a.k.a reducing function
       (fn
-
         ([] (next-machine)) ; Init
         ([result]
          (println "we're done!" {:final-result result})
@@ -93,8 +95,6 @@
   (run-factory machine-3 conj [] [1 2 3 4 5 6 7 8 9 10])
 
 
-
-
   ;; And since transducers are composable
   ;; and the wrapping of a transducer returns another transducer
   ;; we can create another machine that composes the composition of a machine
@@ -104,7 +104,6 @@
   (defn machine-4 [msg]
     (fn [next-machine] ; a.k.a reducing function
       (fn
-
         ([] (next-machine)) ; Init
         ([result]
          (print msg {:final-result result})
@@ -118,5 +117,125 @@
 
   (run-factory machine-5 conj [] [1 2 3 4 5 6 7 8 9 10])
 
+  ;
+  )
+
+
+;;;; 
+
+
+(comment
+  (def story ["The" "quick" "brown" "fox" "jumps" "over" "the" "lazy" "dog"])
+
+  (defn long-word? [^String word]
+    (-> word
+        .length
+        (> 3)))
+
+  (map str/upper-case (filter long-word? story))
+
+  (defn logging [f]
+    (fn [& args]
+      (prn args)
+      (apply f args)))
+
+  (reduce (logging conj) [] story)
+
+  ;; filter map
+  (defn step [result-so-far input]
+    (if (long-word? input)
+      (conj result-so-far (str/upper-case input))
+      result-so-far))
+
+  (reduce step [] story)
+
+  ; transducer version
+  ; you just define the steps of computation
+  ; and everything happens in a single pass through the data
+  ; rather than multiple transformations on multiple intermediary collections
+  (def composition (comp (filter long-word?)
+                         (map str/upper-case)))
+
+  (transduce composition conj [] story)
+
+  ;
+  )
+
+(comment
+
+
+  ((comp #(* 2 %) ; then this
+         #(inc %) ; first this
+         )1) ;-> 4 - if it were the other way around, the result would be 3
+
+  ; transducers flip the order
+  ; they wrap in reverse order but applicate the functions
+  ; in order
+  (def xf (comp (map inc) ; first this
+                (filter even?) ; then this
+                ))
+
+  (sequence xf [1 2 3])
+  (transduce xf conj [] [1 2 3 4 5])
+
+  (def in (async/chan 10 xf))
+  (async/onto-chan! in [1 2 3 4 5])
+  (async/<!! (async/into [] in))
+
+  (defn odd-square-xf [msg]
+    (fn [rf] ;; This is the transducer
+      (fn
+        ([] (rf)) ; Init
+        ([result] (rf result)) ; Completion
+        ([result new-input] ; step
+           ; whatever we're doing, let's log the message before yielding the new value
+         (println msg {:result result
+                       :new-input new-input
+                       :should-transform? (odd? new-input)
+                       :potential-result (* new-input new-input)})
+         (if (odd? new-input)
+           (rf result (* new-input new-input))
+             ; This next part is just for visualization, usually you just return result
+             ; meaning, you don't modify the result in any way
+             ; in here we're "tagging" it, indicating no usage
+             ; just to visualize the result
+           (rf result (str new-input " is no good, I'm not touching it")))))))
+
+  (transduce
+   (odd-square-xf "Hi from transducer creator")
+   conj [] [1 2 3 4 5 6 7])
+
+
+  ; Composing
+  (def composed-xf
+    (comp (odd-square-xf "Hi from transducer creator")
+          (filter #(or (string? %)
+                       (< % 50)))))
+
+  (transduce composed-xf conj [] [1 3 5 7 9 10])
+
+    ;;;;
+
+
+
+  (def xf (comp (map inc) (filter even?)))
+  (def rf (xf conj))
+  xf
+  rf
+
+  (rf [] 1)
+  (rf [2] 2)
+  (rf [2] 3)
+
+  xf
+  rf
+  ;; then inspect rf — it's a fully composed reducing function
+
+  (def pipeline
+    (comp
+     (map #(* % %))
+     (filter #(< % 50))))
+
+  (transduce pipeline conj [] [1 2 3 4 5 6 7 8])
   ;
   )

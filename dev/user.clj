@@ -1,6 +1,7 @@
 (ns user
   (:require
    [camel-snake-kebab.core :as csk]
+   [clojure.core.async :as async]
    [honey.sql :as honey]
    [integrant.repl :as ig-repl]
    [integrant.repl.state :as ig-state]
@@ -10,9 +11,10 @@
    [nexus.router.helpers :as rh]
    [nexus.system :as system]
    [reitit.core :as reitit]
-   [clojure.core.async :as async]
+   [clojure.string :as str]
    [taoensso.telemere :as tel] ; Use telemery as default logger
-   ))
+
+   [clojure.string :as string]))
 
 
 (do
@@ -266,66 +268,7 @@
   (db/exec! (connection) {:select [:*]
                           :from :nexus.users})
 
-  (inc 1)
 
-  (map #(inc %))
-
-  transduce
-
-  ((comp #(* 2 %) #(inc %)) 1)
-
-  (def xf (comp (map inc) (filter even?)))
-
-  (sequence xf [1 2 3])
-  (transduce xf conj [] [1 2 3 4 5])
-
-  (def in (async/chan 10 xf))
-  (async/onto-chan! in [1 2 3 4 5])
-  (async/<!! (async/into [] in))
-
-  (defn odd-square-xf [msg]
-    (fn [rf] ;; This is the transducer
-      (fn
-        ([] (rf)) ; Init
-        ([result] (rf result)) ; Completion
-        ([result new-input] ; step
-         ; whatever we're doing, let's log the message before yielding the new value
-         (println msg {:result result
-                       :new-input new-input
-                       :should-transform? (odd? new-input)
-                       :potential-result (* new-input new-input)})
-         (if (odd? new-input)
-           (rf result (* new-input new-input))
-           ; This next part is just for visualization, usually you just return result
-           ; meaning, you don't modify the running process
-           ; you have no participation in it
-           ; someone else 
-           (rf result (str new-input " is no good, I'm not touching it")))))))
-
-  (def composed-xf
-    (comp (odd-square-xf "Hi from transducer creator")
-          (filter #(or (string? %) (< % 50)))))
-
-  (transduce (odd-square-xf "Hi from transducer creator") conj [] [1 2 3 4 5 6 7])
-  (println "Example two")
-  (transduce composed-xf conj [] [1 3 5 7 9 10])
-
-  ;;;;
-
-
-
-  (def xf (comp (map inc) (filter even?)))
-  (def rf (xf conj))
-  (clojure.repl/source conj)
-  xf
-  rf
-
-  (rf [] 1)
-  (rf [2] 2)
-
-  xf
-  rf
-  ;; then inspect rf — it's a fully composed reducing function
 
   ;
   )

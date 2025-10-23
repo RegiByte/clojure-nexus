@@ -3,6 +3,7 @@
 /checkouts
 
 data/
+uploads/
 profiles.clj
 pom.xml
 pom.xml.asc

@@ -18,8 +18,7 @@
                               :show-error-stacks? #profile {:dev true
                                                             :prod false}}
                     :deps {:db #ig/ref :nexus.db/connection
-                           ;; Future: :users-service #ig/ref :nexus.services/users 
-                           }}
+                           :users-service #ig/ref :nexus.services/users}}
  :nexus.server/server {:options {:port #ref [:nexus.system/env :port]}
                        :deps {:app #ig/ref :nexus.server/app}}
  ;;
