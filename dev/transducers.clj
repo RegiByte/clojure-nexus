@@ -94,6 +94,8 @@
 
   (run-factory machine-3 conj [] [1 2 3 4 5 6 7 8 9 10])
 
+  (map #(> 2 %))
+
 
   ;; And since transducers are composable
   ;; and the wrapping of a transducer returns another transducer

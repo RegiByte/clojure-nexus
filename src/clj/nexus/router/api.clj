@@ -4,6 +4,97 @@
    [reitit.openapi :as openapi]
    [reitit.ring.malli :as malli]))
 
+(defn secure-route []
+  ["/secure"
+   {:tags #{"secure"}
+    :openapi {:security [{"auth" []}]}
+    :swagger {:security [{"auth" []}]}}
+
+   ["/get"
+    {:get {:summary "endpoint authenticated with a header"
+           :responses {200 {:body [:map [:secret :string]]}
+                       401 {:body [:map [:error :string]]}}
+           :handler (fn [request]
+                      ;; In a real app authentication would be handled by middleware
+                      (if (= "secret" (get-in request [:headers "x-api-key"]))
+                        {:status 200
+                         :body {:secret "I am a marmot"}}
+                        {:status 401
+                         :body {:error "unauthorized"}}))}}]])
+
+(defn math-routes []
+  ["/math"
+   {:tags #{"math"}}
+
+   ["/plus"
+    {:get {:summary "plus with malli query parameters"
+           :parameters {:query [:map
+                                [:x
+                                 {:title "X parameter"
+                                  :description "Description for X parameter"
+                                  :json-schema/default 42}
+                                 int?]
+                                [:y {:title "Y paramater"
+                                     :description "These attributes are not required"} int?]]}
+           :responses {200 {:body [:map [:total int?]]}}
+           :handler (fn [{{{:keys [x y]} :query} :parameters}]
+                      {:status 200
+                       :headers {"Content-Type" "application/json"}
+                       :body {:total (+ x y)}})}
+
+     :post {:summary "plus with malli body parameters"
+            :parameters {:body [:map
+                                [:x
+                                 {:title "X parameter"
+                                  :description "Description for X parameter"
+                                  :json-schema/default 42}
+                                 int?]
+                                [:y int?]]}
+            :responses {200 {:body [:map [:total int?]]}}
+            :handler (fn [{{{:keys [x y]} :body} :parameters}]
+                       {:status 200
+                        :body {:total (+ x y)}})}}]])
+
+(defn file-routes []
+  ["/files"
+   {:tags #{"files"}}
+
+   ["/upload"
+    {:post {:summary "upload a file"
+            :parameters {:multipart [:map [:file malli/temp-file-part]]}
+            :responses {200 {:body [:map [:name string?] [:size int?]]}}
+            :handler (fn [{{{:keys [file]} :multipart} :parameters :as request}]
+                       (tap> request)
+                       ;; Create uploads directory if it doesn't exist
+                       (let [upload-dir (io/file "uploads")
+                             _ (.mkdirs upload-dir)
+                             unique-id (str (java.util.UUID/randomUUID))
+                             original-filename (:filename file)
+                             ;; create destination file
+                             dest-file (io/file upload-dir (str unique-id "--" original-filename))
+                             ;; Copy the temp file to the destination
+                             _ (io/copy (:tempfile file) dest-file)]
+                         {:status 200
+                          :body {:name (:filename file)
+                                 :size (:size file)}}))}}]
+
+   ["/download"
+    {:get {:summary "downloads a file"
+           :swagger {:produces ["image/png"]}
+           :responses {200 {:description "an image"
+                            :content {"image/png" {:schema string?}}}}
+           :handler (fn [_]
+                      {:status 200
+                       :headers {"Content-Type" "image/png"}
+                       :body (-> "public/favicon-32x32.png"
+                                 (io/resource)
+                                 (io/input-stream))})}}]])
+
+(defn example-routes []
+  [(secure-route)
+   (math-routes)
+   (file-routes)])
+
 (defn routes
   "Main delegator for API routes"
   []
@@ -29,87 +120,9 @@
                                                                         :name "x-api-key"}}}}
                        :handler (openapi/create-openapi-handler)}}]
 
-   ["/secure"
-    {:tags #{"secure"}
-     :openapi {:security [{"auth" []}]}
-     :swagger {:security [{"auth" []}]}}
-    ["/get"
-     {:get {:summary "endpoint authenticated with a header"
-            :responses {200 {:body [:map [:secret :string]]}
-                        401 {:body [:map [:error :string]]}}
-            :handler (fn [request]
-                       ;; In a real app authentication would be handled by middleware
-                       (if (= "secret" (get-in request [:headers "x-api-key"]))
-                         {:status 200
-                          :body {:secret "I am a marmot"}}
-                         {:status 401
-                          :body {:error "unauthorized"}}))}}]]
+   ["/examples", (example-routes)]
 
-   ["/math"
-    {:tags #{"math"}}
 
-    ["/plus"
-     {:get {:summary "plus with malli query parameters"
-            :parameters {:query [:map
-                                 [:x
-                                  {:title "X parameter"
-                                   :description "Description for X parameter"
-                                   :json-schema/default 42}
-                                  int?]
-                                 [:y {:title "Y paramater"
-                                      :description "These attributes are not required"} int?]]}
-            :responses {200 {:body [:map [:total int?]]}}
-            :handler (fn [{{{:keys [x y]} :query} :parameters :as request}]
-                       (tap> {:x x :y y
-                              :request request})
-                       {:status 200
-                        :body {:total (+ x y)}})}
 
-      :post {:summary "plus with malli body parameters"
-             :parameters {:body [:map
-                                 [:x
-                                  {:title "X parameter"
-                                   :description "Description for X parameter"
-                                   :json-schema/default 42}
-                                  int?]
-                                 [:y int?]]}
-             :responses {200 {:body [:map [:total int?]]}}
-             :handler (fn [{{{:keys [x y]} :body} :parameters}]
-                        {:status 200
-                         :body {:total (+ x y)}})}}]]
-
-   ["/files"
-    {:tags #{"files"}}
-
-    ["/upload"
-     {:post {:summary "upload a file"
-             :parameters {:multipart [:map [:file malli/temp-file-part]]}
-             :responses {200 {:body [:map [:name string?] [:size int?]]}}
-             :handler (fn [{{{:keys [file]} :multipart} :parameters :as request}]
-                        (tap> request)
-                        ;; Create uploads directory if it doesn't exist
-                        (let [upload-dir (io/file "uploads")
-                              _ (.mkdirs upload-dir)
-                              unique-id (str (java.util.UUID/randomUUID))
-                              original-filename (:filename file)
-                              ;; create destination file
-                              dest-file (io/file upload-dir (str unique-id "--" original-filename))
-                              ;; Copy the temp file to the destination
-                              _ (io/copy (:tempfile file) dest-file)]
-                          {:status 200
-                           :body {:name (:filename file)
-                                  :size (:size file)}}))}}]
-
-    ["/download"
-     {:get {:summary "downloads a file"
-            :swagger {:produces ["image/png"]}
-            :responses {200 {:description "an image"
-                             :content {"image/png" {:schema string?}}}}
-            :handler (fn [_]
-                       {:status 200
-                        :headers {"Content-Type" "image/png"}
-                        :body (-> "public/favicon-32x32.png"
-                                  (io/resource)
-                                  (io/input-stream))})}}]]
    ;
    ])

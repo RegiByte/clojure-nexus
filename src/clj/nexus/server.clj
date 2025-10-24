@@ -101,7 +101,14 @@
    - Handle exceptions in the middle to catch errors from both sides
    - Format response last so all responses are consistent"
   [options]
-  [[wrap-context-deps (:deps options)]
+  [;; debug
+   [(fn [handler]
+      (fn [request]
+        (let [response (handler request)]
+          (tap> {:response response
+                 :request request})
+          response)))]
+   [wrap-context-deps (:deps options)]
    ;; openapi
    openapi/openapi-feature
    ;; query-params & form-params
@@ -139,9 +146,9 @@
   [mode]
   (case mode
     :dev {:origins [#".*"] ; Allow all origins in development
-          :allow-credentials true}
+          :allow-credentials false}
     :prod {:origins [#"http://example.prod.domain"] ; Restrict in production
-           :allow-credentials true}))
+           :allow-credentials false}))
 
 ;; Router & Handler Creation
 ;; ==========================
@@ -206,7 +213,7 @@
     wrapped-handler (cors/wrap-cors handler
                                     :access-control-allow-origin (:origins cors-cfg)
                                     :access-control-allow-methods [:get :post :put :delete :patch :options]
-                                    :access-control-allow-credentials (:allow-credentials cors-cfg)
+                                    :access-control-allow-credentials (str (:allow-credentials cors-cfg))
                                     :access-control-allow-headers ["Content-Type" "Authorization"])]
     {:router router
      :handler wrapped-handler}))
