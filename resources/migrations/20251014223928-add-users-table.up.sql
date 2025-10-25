@@ -4,8 +4,10 @@ CREATE TABLE IF NOT EXISTS nexus.users (
     last_name VARCHAR(255) NOT NULL,
     middle_name VARCHAR(255),
     email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(500) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMP
 );
 --;;
 CREATE INDEX IF NOT EXISTS idx_nexus_users_email ON nexus.users (email);

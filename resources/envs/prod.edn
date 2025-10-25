@@ -1,2 +1,3 @@
 {:db-url #env DB_URL
- :port #long #or [#env PORT 80]}
+ :port #long #or [#env PORT 80]
+ :jwt-secret #env JWT_SECRET}

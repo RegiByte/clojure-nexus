@@ -5,14 +5,14 @@
    [integrant.core :as ig]
    [jsonista.core :as jsonista]
    [malli.util :as mu]
-   [malli.core :as m]
    [muuntaja.core :as muuntaja-core]
+   [nexus.auth.middleware :as auth-middleware]
+   [nexus.errors :as errors]
    [nexus.router.core :refer [routes]]
    [reitit.coercion.malli :as malli-coercion]
    [reitit.dev.pretty :as pretty]
    [reitit.openapi :as openapi]
    [reitit.ring :as ring]
-   [reitit.coercion :as rc]
    [reitit.ring.coercion :as coercion]
    [reitit.ring.middleware.exception :as exception]
    [reitit.ring.middleware.multipart :as multipart]
@@ -20,7 +20,11 @@
    [reitit.ring.middleware.parameters :as parameters]
    [reitit.swagger-ui :as swagger-ui]
    [ring.adapter.jetty :as jetty]
+   [ring.middleware.content-type :as content-type]
+   [ring.middleware.cookies :as ring-cookies]
    [ring.middleware.cors :as cors]
+   [ring.middleware.default-charset :as default-charset]
+   [ring.middleware.x-headers :as x-headers]
    [taoensso.telemere :as tel]))
 
 
@@ -65,6 +69,28 @@
                  (assoc-in [:body :data] (ex-data exception)))
              response))))))
 
+(defn known-exception-handler
+  "Creates a Ring middleware exception handler.
+   
+   Why this is important:
+   - Prevents uncaught exceptions from crashing your server
+   - Logs all errors for debugging
+   - Returns user-friendly error responses
+   - In dev mode, includes stack traces for debugging
+   - In prod mode, hides implementation details for security
+   
+   Parameters:
+   - message: Error message to show users
+   - options: {:show-error-stacks? boolean} - whether to include stack traces"
+  [fallback-message]
+  (fn [exception _request]
+    (let [{:keys [status data details]} (ex-data exception)]
+      (-> {:status (or status
+                       500)
+           :body (cond-> {:error (or (ex-message exception) fallback-message)}
+                   data (assoc :data data)
+                   details (assoc :details details))}))))
+
 (defn not-found-handler
   "Handles 404 Not Found responses.
    
@@ -102,13 +128,23 @@
    - Format response last so all responses are consistent"
   [options]
   [;; debug
-   [(fn [handler]
-      (fn [request]
-        (let [response (handler request)]
-          (tap> {:response response
-                 :request request})
-          response)))]
+   ;;  [(fn [handler]
+   ;;     (fn [request]
+   ;;       (let [response (handler request)]
+   ;;         (tap> {:response response
+   ;;                :request request})
+   ;;         response)))]
+   ;; prevent resources with invalid media types being loaded as stylesheets or scripts
+   [x-headers/wrap-content-type-options :nosniff]
+   ;; Only allow embedding iframes of same-origin
+   ;; Prevent click hijacking
+   [x-headers/wrap-frame-options :sameorigin]
+   content-type/wrap-content-type
+   [default-charset/wrap-default-charset "utf-8"]
+   ring-cookies/wrap-cookies
    [wrap-context-deps (:deps options)]
+   ;; JWT Auth - Cookie & Header support
+   [auth-middleware/wrap-jwt-authentication]
    ;; openapi
    openapi/openapi-feature
    ;; query-params & form-params
@@ -120,7 +156,11 @@
    ;; error handling
    (exception/create-exception-middleware
     (merge exception/default-handlers
-           {::exception/default (exception-handler "Unhandled exception" options)}))
+           {::exception/default (exception-handler "Unhandled exception" options)
+            ::errors/unauthorized (known-exception-handler "Failed to authenticate")
+            ::errors/conflict (known-exception-handler "Conflict")
+            ::errors/validation (known-exception-handler "Validation failedd")
+            ::errors/not-found (known-exception-handler "Not found")}))
    ;; decoding request body
    muuntaja/format-request-middleware
    ;; coercing response bodys
@@ -270,6 +310,7 @@
              :level :info} "initializing server")
   (jetty/run-jetty (-> deps :app :handler) {:join? false
                                             :max-idle-time 30000
+                                            :host "0.0.0.0"
                                             :port (:port options)}))
 
 (defmethod ig/halt-key! ::server [_ server]

@@ -1,8 +1,12 @@
 (ns nexus.router.api
   (:require
    [clojure.java.io :as io]
+   [nexus.auth.middleware :as auth-middleware]
+   [nexus.shared.maps :as maps]
+   [nexus.users.service :as users-service]
    [reitit.openapi :as openapi]
-   [reitit.ring.malli :as malli]))
+   [reitit.ring.malli :as malli]
+   [nexus.errors :as errors]))
 
 (defn secure-route []
   ["/secure"
@@ -21,6 +25,43 @@
                          :body {:secret "I am a marmot"}}
                         {:status 401
                          :body {:error "unauthorized"}}))}}]])
+
+(defn auth-routes []
+  ["/auth"
+   {:tags #{"auth"}}
+   [["/login" {:name :api-login
+               :summary "Signs in a user and returns a JWT token"
+               :post {:parameters {:body users-service/LoginCredentials}
+                      :responses {200 {:body [:map
+                                              [:message :string]
+                                              [:token :string]
+                                              [:user [:map {:closed false}]]]}
+                                  401 {:body [:map [:error :string]]}}
+                      :handler (fn [request]
+                                 (try
+                                   (let [users-service (-> request :context :users-service)
+                                         {:keys [email password]} (-> request :parameters :body)
+                                         {:keys [token user]}
+                                         ((:authenticate-user users-service)
+                                          {:email email
+                                           :password password})]
+                                     {:status 200
+                                      :body {:message "Logged in successfully"
+                                             :token token
+                                             :user (maps/unqualify-keys* user)}})
+                                   (catch Exception e
+                                     {:status 401
+                                      :body {:error (ex-message e)}})))}}]
+
+    ["/identity" {:name :api-auth-identity
+                  :summary "Gets auth info from Authorization header JWT"
+                  :get {:responses {200 {:body [:map [:identity [:map {:closed false}]]]}
+                                    401 {:body [:map [:error :string]]}}
+                        :openapi {:security [{"bearerAuth" {}}]}
+                        :handler (fn [request]
+                                   (auth-middleware/ensure-authenticated! request)
+                                   {:status 200
+                                    :body {:identity (auth-middleware/req-identity request)}})}}]]])
 
 (defn math-routes []
   ["/math"
@@ -115,14 +156,15 @@
                        :openapi {:info {:title "Nexus API"
                                         :description "A showcase of how to build a production-ready web server in clojure"
                                         :version "0.0.1"}
-                                 :components {:securitySchemes {"auth" {:type :apiKey
-                                                                        :in :header
-                                                                        :name "x-api-key"}}}}
+                                 :components {:securitySchemes {"bearerAuth" {:type :http
+                                                                              :scheme "bearer"
+                                                                              :bearerFormat "JWT"}}}}
                        :handler (openapi/create-openapi-handler)}}]
 
    ["/examples", (example-routes)]
 
 
+   (auth-routes)
 
    ;
    ])

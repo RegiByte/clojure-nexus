@@ -1,7 +1,6 @@
 (ns user
   (:require
    [camel-snake-kebab.core :as csk]
-   [clojure.core.async :as async]
    [honey.sql :as honey]
    [integrant.repl :as ig-repl]
    [integrant.repl.state :as ig-state]
@@ -11,10 +10,8 @@
    [nexus.router.helpers :as rh]
    [nexus.system :as system]
    [reitit.core :as reitit]
-   [clojure.string :as str]
    [taoensso.telemere :as tel] ; Use telemery as default logger
-
-   [clojure.string :as string]))
+   ))
 
 
 (do
@@ -59,10 +56,11 @@
 
 (defn services:users
   []
-  (:nexus.services/users (system)))
+  (:nexus.users/service (system)))
+(defn services:jwt
+  []
+  (:nexus.auth/jwt (system)))
 ;; Acessors
-
-
 
 
 ;; Load and prepare the config
@@ -87,7 +85,39 @@
   (start)
   (stop)
   (restart)
+
   ;;/ Lifecycle management
+  )
+
+
+(comment
+  ;; Testing Users service
+
+  ((:register-user! (services:users))
+   {:first-name "Reginaldo"
+    :last-name "Junior"
+    :middle-name "Adriano"
+    :email "regi+2@test.com"
+    :password "somenicepassword"})
+
+  ((:authenticate-user (services:users))
+   {:email "regi+2@test.com"
+    :password "somenicepassword"})
+
+  ((:change-password! (services:users))
+   {:user-id 1
+    :old-password "somenicepassword"
+    :new-password "updatedpassword!"})
+
+  (when-let [result ((:authenticate-user (services:users))
+                     {:email "regi+2@test.com"
+                      :password "updatedpassword!"})]
+    (:token result))
+
+  ((:list-users (services:users))
+   {:offset 0
+    :limit 50})
+  ;; Testing Users service
   )
 
 (comment
@@ -99,8 +129,7 @@
   (server:handler)
   (server:router)
   (services:users)
-
-  ((:some-method (services:users)) "hi there!")
+  (services:jwt)
   ;; Common acessors
   )
 
@@ -273,3 +302,23 @@
   ;
   )
 
+
+
+(comment
+  ;; Testing JWT
+
+  ((:generate-token (services:jwt))
+   {:id "123"
+    :email "regi@test.com"}
+
+   {:claims {:roles ["user" "admin"]
+             :some "claim"}})
+
+  ((:token-valid? (services:jwt))
+   "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyLWlkIjoiMTIzIiwiZW1haWwiOiJyZWdpQHRlc3QuY29tIiwiaWF0IjoxNzYxMzQ5ODkxLCJleHAiOjE3NjE0MzYyOTEsInJvbGVzIjpbInVzZXIiLCJhZG1pbiJdLCJzb21lIjoiY2xhaW0ifQ.0zUA-iCI-fGiMCEuOZKyk50t4eWtfY_tN2Ih_BVXEr8")
+
+  ((:verify-token (services:jwt))
+   "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyLWlkIjoiMTIzIiwiZW1haWwiOiJyZWdpQHRlc3QuY29tIiwiaWF0IjoxNzYxMzQ5ODkxLCJleHAiOjE3NjE0MzYyOTEsInJvbGVzIjpbInVzZXIiLCJhZG1pbiJdLCJzb21lIjoiY2xhaW0ifQ.0zUA-iCI-fGiMCEuOZKyk50t4eWtfY_tN2Ih_BVXEr8")
+
+;
+  )

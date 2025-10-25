@@ -28,6 +28,10 @@
                  [com.github.seancorfield/honeysql "2.6.1270"]
                  [migratus "1.6.3"]
 
+                 ;; Auth + JWT
+                 [buddy/buddy-hashers "2.0.167"] 
+                 [buddy/buddy-sign "3.5.351"]
+
                  ;; Logging
                  [com.taoensso/telemere "1.1.0"]
                  [com.taoensso/telemere-slf4j "1.1.0"]
@@ -38,6 +42,7 @@
                  [metosin/reitit "0.7.2"]
                  [metosin/ring-http-response "0.9.5"]
                  [ring/ring-core "1.15.3"]
+                 [ring/ring-headers "0.4.0"]
                  [ring/ring-jetty-adapter "1.15.3"]]
   :main ^:skip-aot nexus.core
   :target-path "target/%s"

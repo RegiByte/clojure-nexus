@@ -9,7 +9,7 @@
    No one is required to separate their routes, 
    but I think it looks quite clean and easy to follow."
   []
-  [["/api", (nexus-api/routes)]
-   ["", (web-api/routes)]
+  [["/api", {:tags #{:api}}, (nexus-api/routes)]
+   ["", {:tags #{:web}}, (web-api/routes)]
    ;
    ])
