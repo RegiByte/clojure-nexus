@@ -29,7 +29,7 @@
                  [migratus "1.6.3"]
 
                  ;; Auth + JWT
-                 [buddy/buddy-hashers "2.0.167"] 
+                 [buddy/buddy-hashers "2.0.167"]
                  [buddy/buddy-sign "3.5.351"]
 
                  ;; Logging
@@ -52,12 +52,16 @@
 
   :profiles {:uberjar {:aot :all
                        :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}
-             :dev {:source-paths ["dev"]
+             :dev {:source-paths ["dev" "test/clj"]
                    :dependencies [[integrant/repl "0.3.3"]
                                   [djblue/portal "0.61.0"]
-                                  [binaryage/devtools "1.0.7"]]
+
+                                  [binaryage/devtools "1.0.7"]
+                                  ;; Testing
+                                  [org.testcontainers/testcontainers "1.20.3"]
+                                  [org.testcontainers/postgresql "1.20.3"]]
                    :repl-options {:init-ns user}}
-             :cljs {:source-paths ["src/cljs"]
+             :cljs {:source-paths ["src/cljs" "test/cljs"]
                     :dependencies [;; ClojureScript dev deps
                                    [thheller/shadow-cljs "2.28.17"]
                                    [reagent "1.2.0"]

@@ -80,7 +80,6 @@
            :responses {200 {:body [:map [:total int?]]}}
            :handler (fn [{{{:keys [x y]} :query} :parameters}]
                       {:status 200
-                       :headers {"Content-Type" "application/json"}
                        :body {:total (+ x y)}})}
 
      :post {:summary "plus with malli body parameters"

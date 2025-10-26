@@ -286,7 +286,7 @@
                      []
                      (:router (create-handler (merge handler-params {:routes (#'routes)}))))}
       ;; Prod: compile once for performance
-      (create-handler (merge handler-params {:routes routes})))))
+      (create-handler (merge handler-params {:routes (routes)})))))
 
 (defmethod ig/init-key ::app [_ {:keys [options deps]}]
   "Initializes the application handler component.
@@ -294,6 +294,8 @@
    This is called by Integrant when starting :nexus.server/app.
    It creates the Ring handler that processes HTTP requests."
   (tel/log! :info "initializing server handler")
+  (println {:deps deps
+            :options options})
   (create-root-handler options deps))
 
 (defmethod ig/init-key ::server [_ {:keys [options deps]}]
