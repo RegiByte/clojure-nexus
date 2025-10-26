@@ -203,7 +203,7 @@
                           )]
     (into {} (map-indexed vector parsed))))
 
-(defn stop-containers [& indexes]
+(defn stop-containers! [& indexes]
   (let [running-containers (get-running-containers)
         containers-to-stop (select-keys running-containers indexes)]
     (doseq [[idx container] containers-to-stop]
@@ -228,6 +228,6 @@
   ;; List running containers
   (get-running-containers)
   ;; Stop container based on index
-  (stop-containers 0)
+  (stop-containers! 0)
   ;
   )

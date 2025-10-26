@@ -20,6 +20,8 @@
                  [metosin/malli "0.17.0"]
                  ;; Json
                  [metosin/jsonista "0.3.13"]
+                 ;; HTTP Requests
+                 [clj-http "3.13.1"]
 
                  ;; Database
                  [org.postgresql/postgresql "42.7.5"]

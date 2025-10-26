@@ -1,7 +1,6 @@
 (ns nexus.test.system
   "Test system management with Integrant and testcontainers"
   (:require
-   [clojure.test :refer :all]
    [integrant.core :as ig]
    [nexus.system :as system]
    [nexus.test.containers :as containers]
@@ -19,7 +18,7 @@
 (defmethod ig/halt-key! :nexus.db/connection
   [_ _connection]
   ;; No-op for test DB - containers/with-test-db handles cleanup
-  (tel/log! :info "Test DB connection halt (no-op)"))
+  nil)
 
 ;; =============================================================================
 ;; Configuration Loading (without automatic namespace loading)
@@ -55,6 +54,18 @@
   ;; Notably: we DON'T require 'nexus.db because we override its methods here
   )
 
+(defn setup-logging!
+  []
+  (tel/set-ns-filter! {:disallow ["org.eclipse.jetty.server.*"
+                                  ; Testcontainers
+                                  "org.testcontainers.images.*"
+                                  "org.testcontainers.dockerclient.*"
+                                  "org.testcontainers.utility.*"
+                                  "org.testcontainers.DockerClientFactory"
+                                  "tc.testcontainers.*"
+                                  ; Migratus
+                                  "migratus.database"]}))
+
 (defn with-system
   "Provides a fully initialized system with a fresh test database.
      
@@ -75,21 +86,60 @@
   [test-fn]
   ;; Load namespaces once (idempotent)
   (load-required-namespaces!)
-
+  (setup-logging!)
   (containers/with-test-db
     (fn [test-db]
+      (tel/set-min-level! :error)
       (let [config (test-config test-db)
             system (ig/init config)]
         (try
-          (println "Running test function")
           (test-fn system)
           (finally
-            (println "Halting system")
+            (tel/set-min-level! :info)
+            (ig/halt! system)))))))
+
+(defn with-system+server
+  "Provides a fully initialized system with a fresh test database.
+   It includes the jetty server, started on a random port per test
+     
+   Flow:
+   1. Creates a fresh test database (isolated from other tests)
+   2. Manually loads required namespaces (avoiding production DB code)
+   3. Initializes the Integrant system with test config
+   4. Runs your test callback with the system map
+   5. Halts the system (closes connections, etc.)
+   6. Drops the test database
+   
+   Usage:
+   (with-system
+     (fn [system]
+       (let [db (-> system :nexus.db/connection)
+             users-service (-> system :nexus.users/service)]
+         (is (= ...)))))"
+  [test-fn]
+  ;; Load namespaces once (idempotent)
+  (load-required-namespaces!)
+  (setup-logging!)
+  (containers/with-test-db
+    (fn [test-db]
+      (tel/set-min-level! :error)
+      (let [config (test-config test-db)
+            config+server (merge config {:nexus.server/server
+                                         {:options
+                                          {; Started on random port per test
+                                           :port 0}
+                                          :deps {:app (ig/ref :nexus.server/app)}}})
+            system (ig/init config+server)]
+        (try
+          (test-fn system)
+          (finally
+            (tel/set-min-level! :info)
             (ig/halt! system)))))))
 
 (comment
   (with-system (fn [system]
                  (println system)))
+
 
   ;
   )

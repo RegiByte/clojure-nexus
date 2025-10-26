@@ -120,7 +120,8 @@
 ;; ===========================
 
 (defmethod ig/init-key ::env [_ env]
-  (tel/log! :info (str "initializing env " env))
+  ; forward the config, loads from env file based on profile
+  ; this is almost never used directly
   env)
 
 (comment

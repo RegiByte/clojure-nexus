@@ -143,7 +143,8 @@
                      :handler (fn [_request]
                                 (tap> _request)
                                 {:status 200
-                                 :body {:message "Healthy!"}})}}]
+                                 :body {:message "Healthy!"
+                                        :status "ok"}})}}]
    ["/crash" {:get {:no-doc true
                     :handler (fn [_request]
                                (throw (ex-info "Purposely crashed from route" {:exception-info :nothing?}))

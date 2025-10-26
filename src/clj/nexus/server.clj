@@ -293,9 +293,7 @@
    
    This is called by Integrant when starting :nexus.server/app.
    It creates the Ring handler that processes HTTP requests."
-  (tel/log! :info "initializing server handler")
-  (println {:deps deps
-            :options options})
+  (tel/log! :info "initializing server handler") 
   (create-root-handler options deps))
 
 (defmethod ig/init-key ::server [_ {:keys [options deps]}]
