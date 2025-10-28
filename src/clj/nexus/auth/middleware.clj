@@ -33,27 +33,29 @@
     ((:verify-token jwt-service) token)))
 
 (comment
-  (require '[user])
+  (require '[nexus.dev-system :as ds])
+  (ds/services:jwt)
 
-  (user/services:jwt)
-  ((:generate-token (user/services:jwt))
-   {:id "123"
-    :email "regi@test.com"}
+  (ds/services:jwt)
+  (def test-token ((:generate-token (ds/services:jwt))
+                   {:id "123"
+                    :email "regi@test.com"}
 
-   {:claims {:roles ["user" "admin"]
-             :some "claim"}})
+                   {:claims {:roles ["user" "admin"]
+                             :some "claim"}}))
+  test-token
 
-  ((:verify-token (user/services:jwt))
-   "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyLWlkIjoiMTIzIiwiZW1haWwiOiJyZWdpQHRlc3QuY29tIiwiaWF0IjoxNzYxNDA1MDExLCJleHAiOjE3NjE0OTE0MTEsInJvbGVzIjpbInVzZXIiLCJhZG1pbiJdLCJzb21lIjoiY2xhaW0ifQ.fOTpy2RIlwPiW8SD1WtVKTu9QSWs8jfzS0XmYLCUti4" ;
+  ((:verify-token (ds/services:jwt))
+   test-token)
+
+  (verify-and-decode
+   (ds/services:jwt)
+   test-token ;
    )
 
-  (verify-and-decode (user/services:jwt)
-                     "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyLWlkIjoiMTIzIiwiZW1haWwiOiJyZWdpQHRlc3QuY29tIiwiaWF0IjoxNzYxNDA1MDExLCJleHAiOjE3NjE0OTE0MTEsInJvbGVzIjpbInVzZXIiLCJhZG1pbiJdLCJzb21lIjoiY2xhaW0ifQ.fOTpy2RIlwPiW8SD1WtVKTu9QSWs8jfzS0XmYLCUti4" ;
-                     )
-
-  (verify-and-decode (user/services:jwt)
-                     "randombulshitgooooo" ;
-                     )
+  (verify-and-decode
+   (ds/services:jwt)
+   "randombulshitgooooo")
   ;
   )
 
@@ -65,19 +67,13 @@
   [handler]
   (fn [request]
     (let [;; Try both sources
-          jwt-service (get-in request [:context :jwt-service]) ; injected through integrant
+          jwt-service (get-in request [:context :jwt]) ; injected through integrant
           token (or (extract-jwt-from-header request)
                     (extract-jwt-from-cookie request))
           ;; Verify and decode if found
           identity (verify-and-decode jwt-service token)
           ;; Add identity to request
           request-with-id (assoc request :identity identity)]
-      (tap> {
-             :jwt-service jwt-service
-             :token token
-             :identity identity
-             :request request-with-id
-      })
       (handler request-with-id))))
 
 (defn ensure-authenticated!

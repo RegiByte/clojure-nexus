@@ -24,7 +24,7 @@
 ;;
 ;; Learn more: https://github.com/djblue/portal
 
-(ns portal
+(ns nexus.portal
   (:require [portal.api :as p]))
 
 ;; =============================================================================

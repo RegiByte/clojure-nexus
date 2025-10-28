@@ -3,10 +3,10 @@
    [clojure.java.io :as io]
    [nexus.auth.middleware :as auth-middleware]
    [nexus.shared.maps :as maps]
-   [nexus.users.service :as users-service]
    [reitit.openapi :as openapi]
+   [nexus.users.schemas :as user-schemas]
    [reitit.ring.malli :as malli]
-   [nexus.errors :as errors]))
+   [nexus.users.service :as users]))
 
 (defn secure-route []
   ["/secure"
@@ -31,27 +31,26 @@
    {:tags #{"auth"}}
    [["/login" {:name :api-login
                :summary "Signs in a user and returns a JWT token"
-               :post {:parameters {:body users-service/LoginCredentials}
+               :post {:parameters {:body user-schemas/LoginCredentials}
                       :responses {200 {:body [:map
                                               [:message :string]
                                               [:token :string]
                                               [:user [:map {:closed false}]]]}
                                   401 {:body [:map [:error :string]]}}
                       :handler (fn [request]
-                                 (try
-                                   (let [users-service (-> request :context :users-service)
-                                         {:keys [email password]} (-> request :parameters :body)
-                                         {:keys [token user]}
-                                         ((:authenticate-user users-service)
-                                          {:email email
-                                           :password password})]
-                                     {:status 200
-                                      :body {:message "Logged in successfully"
-                                             :token token
-                                             :user (maps/unqualify-keys* user)}})
-                                   (catch Exception e
-                                     {:status 401
-                                      :body {:error (ex-message e)}})))}}]
+                                 (let [context (:context request)
+                                       {:keys [email password]}
+                                       (-> request :parameters :body)
+
+                                       {:keys [token user]}
+                                       (users/authenticate-user
+                                        context
+                                        {:email email
+                                         :password password})]
+                                   {:status 200
+                                    :body {:message "Logged in successfully"
+                                           :token token
+                                           :user (maps/unqualify-keys* user)}}))}}]
 
     ["/identity" {:name :api-auth-identity
                   :summary "Gets auth info from Authorization header JWT"

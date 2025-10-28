@@ -1,74 +1,79 @@
 (ns nexus.users.service
+  "User service layer - orchestrates queries and schemas with validation"
   (:require
-   [integrant.core :as ig]
    [malli.core :as m]
    [malli.error :as me]
-   [nexus.db :as db]
-   [nexus.service :as service]
-   [taoensso.telemere :as tel]
    [nexus.auth.hashing :as hashing]
+   [nexus.db :as db]
    [nexus.errors :as errors]
-   [nexus.shared.maps :as maps]))
+   [nexus.shared.maps :as maps]
+   [nexus.users.queries :as queries]
+   [nexus.users.schemas :as schemas]
+   [taoensso.telemere :as tel]))
 
-(def EmailSchema [:re #"^[^\s@]+@[^\s@]+\.[^\s@]+$"])
+;; ============================================================================
+;; Validation
+;; ============================================================================
 
-(def UserRegistration
-  [:map
-   [:first-name [:string {:min 1 :max 100}]]
-   [:last-name  [:string {:min 1 :max 100}]]
-   [:middle-name {:optional true} [:maybe :string]]
-   [:email EmailSchema]
-   [:password [:string {:min 8 :max 100}]]])
-
-(def LoginCredentials
-  [:map
-   [:email {:json-schema/default "test@example.com"} EmailSchema]
-   [:password {:json-schema/default "supersecretpassword"} [:string {:min 1}]]])
-
-(defn validate! [schema data]
+(defn validate!
+  "Validate data against a Malli schema, throw validation error if invalid"
+  [schema data]
   (when-let [errors (m/explain schema data)]
     (throw (errors/validation-error
             "Validation failed"
             {:details (me/humanize errors)}))))
 
 
-(defn find-by-email [{:keys [db]} email]
-  (db/exec-one! db {:select [:*] :from :nexus.users :where [:= :email email]}))
+;; ============================================================================
+;; Query Helpers
+;; ============================================================================
+
+(defn find-by-email
+  "Find user by email address"
+  [{:keys [db]} email]
+  (db/exec-one! db (queries/find-by-email-query email)))
+
+(defn find-by-id
+  "Find user by ID"
+  [{:keys [db]} id]
+  (db/exec-one! db (queries/find-by-id-query id)))
+
+;; ============================================================================
+;; Service Functions
+;; ============================================================================
 
 (defn register-user!
   "Register a new user with hashed password"
   [{:keys [db]} {:keys [first-name last-name middle-name email password] :as data}]
-  (validate! UserRegistration data)
-  (tel/log! {:msg "Validation passed"
-             :data data})
+  (validate! schemas/UserRegistration data)
+  (tel/log! {:msg "User registration - validation passed"
+             :data (dissoc data :password)})
+  
   (when (find-by-email {:db db} email)
     (throw (errors/conflict
             "Email already registered"
             {:email email})))
-  (let [password-hash (hashing/hash-password password)]
-    (db/exec-one!
-     db
-     {:insert-into [:nexus.users]
-      :values [{:first_name first-name
-                :last_name last-name
-                :middle_name middle-name
+  
+  (let [password-hash (hashing/hash-password password)
+        query (queries/insert-user-query
+               {:first-name first-name
+                :last-name last-name
+                :middle-name middle-name
                 :email email
-                :password_hash password-hash}]
-      :returning [:id :first_name :last_name :middle_name :email :created_at]})))
+                :password-hash password-hash})]
+    (db/exec-one! db query)))
 
 (defn authenticate-user
   "Authenticate user and return JWT token"
   [{:keys [db jwt]} {:keys [email password] :as credentials}]
-  (validate! LoginCredentials credentials)
-  (if-let [user (db/exec-one!
-                 db
-                 {:select [:*]
-                  :from :nexus.users
-                  :where [:= :email email]})]
+  (validate! schemas/LoginCredentials credentials)
+  
+  (if-let [user (db/exec-one! db (queries/find-by-email-query email))]
     (let [sanitized-user (-> user
                              (dissoc :users/password_hash)
                              (maps/unqualify-keys*))]
-      (println {:user sanitized-user})
+      (tel/log! {:msg "User authentication attempt"
+                 :email email})
       (if (hashing/verify-password password (:users/password_hash user))
         {:token ((:generate-token jwt) sanitized-user {:claims {:roles ["admin" "user"]}})
          :user sanitized-user}
@@ -76,73 +81,53 @@
     (throw (errors/unauthorized "Invalid credentials" {:email email}))))
 
 
-(defn find-by-id [{:keys [db]} id]
-  (db/exec-one! db {:select [:*] :from :nexus.users :where [:= :id id]}))
-
 (defn change-password!
   "Change a user's password"
-  [{:keys [db]} {:keys [user-id old-password new-password]}]
-  (when (< (count new-password) 8)
-    (throw (errors/validation-error "New password too short"
-                                    {:new-password new-password
-                                     :min-length 8})))
+  [{:keys [db]} {:keys [user-id old-password new-password] :as data}]
+  (validate! schemas/ChangePassword data)
+  
   (if-let [user (find-by-id {:db db} user-id)]
     (if (hashing/verify-password old-password (:users/password_hash user))
-      (let [new-hash (hashing/hash-password new-password)]
-        (db/exec-one! db {:update :nexus.users
-                          :set {:password_hash new-hash}
-                          :where [:= :id user-id]
-                          :returning [:id :email]}))
+      (let [new-hash (hashing/hash-password new-password)
+            query (queries/update-password-query user-id new-hash)]
+        (tel/log! {:msg "Password changed successfully"
+                   :user-id user-id})
+        (db/exec-one! db query))
       (throw (errors/unauthorized "Invalid password" {:user-id user-id})))
     (throw (errors/unauthorized "User not found" {:user-id user-id}))))
 
 
 
-(defn list-users [{:keys [db]} {:keys [limit offset] :or {limit 50 offset 0}}]
-  (db/exec! db {:select [:id
-                         :email
-                         :first_name
-                         :last_name
-                         :middle_name
-                         :created_at
-                         :updated_at] :from :nexus.users :order-by [[:created_at :desc]]
-                :limit limit :offset offset}))
+(defn list-users
+  "List users with pagination"
+  [{:keys [db]} params]
+  (validate! schemas/ListUsersParams params)
+  (let [query (queries/list-users-query params)]
+    (db/exec! db query)))
 
-(defn update-user! [{:keys [db]} id updates]
+(defn update-user!
+  "Update user fields"
+  [{:keys [db]} id updates]
+  (validate! schemas/UpdateUser {:id id :updates updates})
   (when (seq updates)
-    (db/exec-one! db {:update :nexus.users
-                      :set (into {} (map (fn [[k v]] [(keyword (name k)) v]) updates))
-                      :where [:= :id id]
-                      :returning [:*]})))
+    (let [query (queries/update-user-query id updates)]
+      (tel/log! {:msg "User updated"
+                 :user-id id
+                 :fields (keys updates)})
+      (db/exec-one! db query))))
 
-(defn delete-user! [{:keys [db]} id]
-  (db/exec-one! db {:update :nexus.users
-                    :set {:deleted_at [:now]}
-                    :where [:= :id id]
-                    :returning [:*]}))
+(defn delete-user!
+  "Soft delete a user"
+  [{:keys [db]} id]
+  (validate! schemas/UserIdParam {:id id})
+  (let [query (queries/soft-delete-user-query id)]
+    (tel/log! {:msg "User soft deleted"
+               :user-id id})
+    (db/exec-one! db query)))
 
-(defn search [{:keys [db]} q]
-  (db/exec! db {:select [:*] :from :nexus.users
-                :where [:or
-                        [:ilike :first_name (str "%" q "%")]
-                        [:ilike :last_name  (str "%" q "%")]
-                        [:ilike :email      (str "%" q "%")]]}))
-
-(def ops
-  ;; Service operations, unresolved
-  {:register-user! register-user!
-   :authenticate-user authenticate-user
-   :change-password! change-password!
-   :find-by-id   find-by-id
-   :find-by-email find-by-email
-   :list-users   list-users
-   :update-user! update-user!
-   :delete-user! delete-user!
-   :search       search})
-
-
-(defmethod ig/init-key :nexus.users/service [_ {:keys [deps]}]
-  ;; Builds the user service by providing the necessary deps 
-  (let [{:keys [db jwt]} deps]
-    (service/build {:db db
-                    :jwt jwt} ops)))
+(defn search
+  "Search users by name or email"
+  [{:keys [db]} q]
+  (validate! schemas/SearchParams {:q q})
+  (let [query (queries/search-users-query q)]
+    (db/exec! db query)))

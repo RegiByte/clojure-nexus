@@ -12,3 +12,8 @@
   (apply rh/named-url (router req) route-name args))
 
 
+(defn context
+  " Extracts the context map of the request
+  This includes stateful components like db and others "
+  [req]
+  (:context req))

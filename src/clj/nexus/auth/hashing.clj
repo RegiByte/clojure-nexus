@@ -20,18 +20,9 @@
 ;; use the fns directly
 
 (comment
-  (hash-password "some super really really long password that is definitely more than
-                                            255 characters, it should definitely break the column size
-                           until it breaks I'll continue typing, typing and typing until we reach at least 255
-                           characters")
+  (def test-hash (hash-password "secretpassword"))
+  (verify-password "secretpassword" test-hash)
+  (verify-password "secretpassword--" test-hash)
   
-  (count
-   "bcrypt+sha512$290fb0eaa79a072e38ec0c08b5726066$12$dbf5f3a4e3fe8ccb222817ceaf50d14e682bc55a806e5d3d"
-   )
-
-  (count "some super really really long password that is definitely more than
-                           255 characters, it should definitely break the column size
-          until it breaks I'll continue typing, typing and typing until we reach at least 255
-          characters")
   ;
   )

@@ -58,6 +58,7 @@
 ;; Shutdown
 (defmethod ig/halt-key! ::connection
   [_ connection]
+  (println "Building system db connection")
   (tel/log! :info "tearing down db")
   (.close (jdbc/get-datasource connection)))
 

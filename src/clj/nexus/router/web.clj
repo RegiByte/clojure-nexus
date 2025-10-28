@@ -4,31 +4,33 @@
    [jsonista.core :as jsonista]
    [nexus.auth.middleware :as auth-middleware]
    [nexus.shared.maps :as maps]
-   [nexus.users.service :as users-service]))
+   [nexus.users.schemas :as user-schemas]
+   [nexus.users.service :as users]))
 
 (defn auth-routes []
   ["/auth" {}
    [["/login" {:name :web-login
                :summary "Signs in a user through cookies"
-               :post {:parameters {:body users-service/LoginCredentials}
+               :post {:parameters {:body user-schemas/LoginCredentials}
                       :responses {200 {:body [:map
                                               [:message :string]
                                               [:user [:map {:closed false}]]]}}
                       :handler (fn [request]
                                  (try
-                                   (let [users-service (-> request :context :users-service)
+                                   (let [context (:context request)
                                          {:keys [email password]} (-> request :parameters :body)
                                          {:keys [token user]}
-                                         ((:authenticate-user users-service)
+                                         (users/authenticate-user
+                                          context
                                           {:email email
                                            :password password})]
                                      {:status 200
                                       :cookies {"auth-token" {:value token
-                                                               :http-only true
-                                                               :secure false
-                                                               :same-site :lax
-                                                               :max-age (* 24 60 60)
-                                                               :path "/"}}
+                                                              :http-only true
+                                                              :secure false
+                                                              :same-site :lax
+                                                              :max-age (* 24 60 60)
+                                                              :path "/"}}
                                       :body {:message "Logged in successfully"
                                              :user (maps/unqualify-keys* user)}})
                                    (catch Exception e
@@ -38,7 +40,7 @@
     ["/logout" {:name :web-logout
                 :summary "Removes auth cookie"
                 :post {:responses {200 {:body [:map [:message :string]]}}
-                       :handler (fn [request]
+                       :handler (fn [_request]
                                   {:status 200
                                    :cookies {"auth-token" {:value ""
                                                            :max-age 0
@@ -90,9 +92,4 @@
    ;
    ]
   ; End Web Routes
-  )
-
-(comment
-
-  ;
   )
