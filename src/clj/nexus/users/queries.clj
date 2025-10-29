@@ -22,14 +22,18 @@
   [email]
   {:select [:*]
    :from [:nexus.users]
-   :where [:= :email email]})
+   :where [:and
+           [:= :email email]
+           (not-deleted)]})
 
 (defn find-by-id-query
   "Build query to find user by id"
   [id]
   {:select [:*]
    :from [:nexus.users]
-   :where [:= :id id]})
+   :where [:and
+           [:= :id id]
+           (not-deleted)]})
 
 (defn insert-user-query
   "Build query to insert a new user"
@@ -53,7 +57,7 @@
             :created_at
             :updated_at]
    :from [:nexus.users]
-   :where [:and (not-deleted)]
+   :where (not-deleted)
    :order-by [[:created_at :desc]]
    :limit limit
    :offset offset})

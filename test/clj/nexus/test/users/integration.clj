@@ -75,10 +75,208 @@
           (is (nil? (-> login-response :body :user :password-hash))
               "Password hash should not be in response"))))))
 
+(deftest list-users-test
+  (testing "Successfully list users with authentication"
+    (test-system/with-system+server
+      (fn [system]
+        (let [server (:nexus.server/server system)
+              base-url (th/server->host server)
 
-(comment
-  (t/run-test login-user-test)
+              ;; Register first user
+              register-response (th/http-request :post
+                                                 (str base-url "/api/users/register")
+                                                 {:body test-user-data})
+
+              ;; Login to get token
+              login-response (th/http-request :post
+                                              (str base-url "/api/users/login")
+                                              {:body {:email (:email test-user-data)
+                                                      :password (:password test-user-data)}})
+              token (-> login-response :body :token)
+
+              ;; Register second user
+              _ (th/http-request :post
+                                 (str base-url "/api/users/register")
+                                 {:body {:first-name "Jane"
+                                         :last-name "Smith"
+                                         :email "jane.smith@example.com"
+                                         :password "anotherpass456"}})
+
+              ;; List users with token
+              list-response (th/http-request :get
+                                             (str base-url "/api/users")
+                                             {:headers {"authorization" (str "Bearer " token)}})]
+          (is (= 200 (:status list-response)))
+          (is (vector? (:body list-response)))
+          (is (>= (count (:body list-response)) 2))
+          (is (every? :email (:body list-response))))))))
 
 
-  ;
-  )
+(deftest get-user-test
+  (testing "Successfully get user by ID with authentication"
+    (test-system/with-system+server
+      (fn [system]
+        (let [server (:nexus.server/server system)
+              base-url (th/server->host server)
+
+              ;; Register user
+              register-response (th/http-request :post
+                                                 (str base-url "/api/users/register")
+                                                 {:body test-user-data})
+              user-id (-> register-response :body :user :id)
+
+              ;; Login to get token
+              login-response (th/http-request :post
+                                              (str base-url "/api/users/login")
+                                              {:body {:email (:email test-user-data)
+                                                      :password (:password test-user-data)}})
+              token (-> login-response :body :token)
+
+              ;; Get user by ID
+              get-response (th/http-request :get
+                                            (str base-url "/api/users/" user-id)
+                                            {:headers {"authorization" (str "Bearer " token)}})]
+          (is (= 200 (:status get-response)))
+          (is (= "john.doe@example.com" (-> get-response :body :email)))
+          (is (= user-id (-> get-response :body :id))))))))
+
+(deftest update-user-test
+  (testing "Successfully update user with authentication"
+    (test-system/with-system+server
+      (fn [system]
+        (let [server (:nexus.server/server system)
+              base-url (th/server->host server)
+
+              ;; Register user
+              register-response (th/http-request :post
+                                                 (str base-url "/api/users/register")
+                                                 {:body test-user-data})
+              user-id (-> register-response :body :user :id)
+
+              ;; Login to get token
+              login-response (th/http-request :post
+                                              (str base-url "/api/users/login")
+                                              {:body {:email (:email test-user-data)
+                                                      :password (:password test-user-data)}})
+              token (-> login-response :body :token)
+
+              ;; Update user
+              update-response (th/http-request :patch
+                                               (str base-url "/api/users/" user-id)
+                                               {:headers {"authorization" (str "Bearer " token)}
+                                                :body {:first-name "Johnny"}})]
+          (is (= 201 (:status register-response)))
+          (is (= 200 (:status update-response)))
+          (is (not (nil? (:body update-response))))
+          (is (= "User updated successfully" (-> update-response :body :message)))
+          (is (= "Johnny" (-> update-response :body :user :first-name))))))))
+
+
+(deftest delete-user-test
+  (testing "Successfully delete user with authentication"
+    (test-system/with-system+server
+      (fn [system]
+        (let [server (:nexus.server/server system)
+              base-url (th/server->host server)
+
+              ;; Register user
+              register-response (th/http-request :post
+                                                 (str base-url "/api/users/register")
+                                                 {:body test-user-data})
+              user-id (-> register-response :body :user :id)
+
+              ;; Login to get token
+              login-response (th/http-request :post
+                                              (str base-url "/api/users/login")
+                                              {:body {:email (:email test-user-data)
+                                                      :password (:password test-user-data)}})
+              token (-> login-response :body :token)
+
+              ;; Delete user
+              delete-response (th/http-request :delete
+                                               (str base-url "/api/users/" user-id)
+                                               {:headers {"authorization" (str "Bearer " token)}})
+
+              verification-response (th/http-request :get
+                                                     (str base-url "/api/users/" user-id)
+                                                     {:headers {"authorization" (str "Bearer " token)}})]
+          (is (= 200 (:status delete-response)))
+          (is (= 404 (:status verification-response)))
+          (is (= "User deleted successfully" (-> delete-response :body :message)))
+          (is (= "User not found" (-> verification-response :body :error))))))))
+
+(deftest change-password-test
+  (testing "Successfully change password with authentication"
+    (test-system/with-system+server
+      (fn [system]
+        (let [server (:nexus.server/server system)
+              base-url (th/server->host server)
+
+              ;; Register user
+              register-response (th/http-request :post
+                                                 (str base-url "/api/users/register")
+                                                 {:body test-user-data})
+              user-id (-> register-response :body :user :id)
+
+              ;; Login to get token
+              login-response (th/http-request :post
+                                              (str base-url "/api/users/login")
+                                              {:body {:email (:email test-user-data)
+                                                      :password (:password test-user-data)}})
+              token (-> login-response :body :token)
+
+              ;; Change password
+              change-pw-response (th/http-request :post
+                                                  (str base-url "/api/users/" user-id "/change-password")
+                                                  {:headers {"authorization" (str "Bearer " token)}
+                                                   :body {:old-password "securepass123"
+                                                          :new-password "newsecurepass456"}})]
+          (is (= 201 (:status register-response)))
+          (is (= 200 (:status login-response)))
+          (is (= 200 (:status change-pw-response)))
+          (is (nil? (-> change-pw-response :body :errors)))
+          (is (= "Password changed successfully" (-> change-pw-response :body :message)))
+
+          ;; Verify can login with new password
+          (let [new-login-response (th/http-request :post
+                                                    (str base-url "/api/users/login")
+                                                    {:body {:email (:email test-user-data)
+                                                            :password "newsecurepass456"}})]
+            (is (= 200 (:status new-login-response)))))))))
+
+(deftest search-users-test
+  (testing "Successfully search users with authentication"
+    (test-system/with-system+server
+      (fn [system]
+        (let [server (:nexus.server/server system)
+              base-url (th/server->host server)
+
+              ;; Register first user
+              _ (th/http-request :post
+                                 (str base-url "/api/users/register")
+                                 {:body test-user-data})
+
+              ;; Register second user
+              _ (th/http-request :post
+                                 (str base-url "/api/users/register")
+                                 {:body {:first-name "Jane"
+                                         :last-name "Smith"
+                                         :email "jane.smith@example.com"
+                                         :password "anotherpass456"}})
+
+              ;; Login to get token
+              login-response (th/http-request :post
+                                              (str base-url "/api/users/login")
+                                              {:body {:email (:email test-user-data)
+                                                      :password (:password test-user-data)}})
+              token (-> login-response :body :token)
+
+              ;; Search for "Jane"
+              search-response (th/http-request :get
+                                               (str base-url "/api/users/search?q=Jane")
+                                               {:headers {"authorization" (str "Bearer " token)}})]
+          (is (= 200 (:status search-response)))
+          (is (vector? (:body search-response)))
+          (is (>= (count (:body search-response)) 1))
+          (is (some #(= "jane.smith@example.com" (:email %)) (:body search-response))))))))
+

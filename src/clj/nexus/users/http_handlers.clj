@@ -3,6 +3,7 @@
   (:require
    [nexus.auth.middleware :as auth-middleware]
    [nexus.shared.maps :as maps]
+   [nexus.users.schemas :as user-schemas]
    [nexus.users.service :as users]))
 
 ;; ============================================================================
@@ -42,6 +43,15 @@
   [:map
    [:message :string]
    [:user {:optional true} User]])
+
+(def ChangePasswordSuccessResponse
+  "Generic success response"
+  [:map
+   [:message :string]
+   [:user {:optional true} [:map
+                            [:id user-schemas/UUIDSchema]
+                            [:email user-schemas/EmailSchema]]]])
+
 
 ;; ============================================================================
 ;; Helper Functions
@@ -104,6 +114,8 @@
   (let [context (:context request)
         user-id (-> request :parameters :path :id)
         user (users/find-by-id context user-id)]
+    (println "found user" {:user-id user-id
+                           :user user})
     (if user
       {:status 200
        :body (sanitize-user user)}

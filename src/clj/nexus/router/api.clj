@@ -189,7 +189,7 @@
               :parameters {:body [:map
                                   [:old-password [:string {:min 1}]]
                                   [:new-password user-schemas/PasswordSchema]]}
-              :responses {200 {:body user-handlers/SuccessResponse
+              :responses {200 {:body user-handlers/ChangePasswordSuccessResponse
                                :description "Password changed"}
                           401 {:body user-handlers/ErrorResponse
                                :description "Unauthorized or invalid password"}

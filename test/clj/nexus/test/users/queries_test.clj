@@ -1,7 +1,7 @@
 (ns nexus.test.users.queries-test
   "Tests for pure HoneySQL query builders"
   (:require
-   [clojure.test :refer [deftest is testing]]
+   [clojure.test :as t :refer [deftest is testing]]
    [nexus.users.queries :as queries]))
 
 (deftest find-by-email-query-test
@@ -9,7 +9,8 @@
     (let [result (queries/find-by-email-query "test@example.com")]
       (is (= {:select [:*]
               :from [:nexus.users]
-              :where [:= :email "test@example.com"]}
+              :where [:and [:= :email "test@example.com"]
+                      [:= nil :deleted_at]]}
              result)))))
 
 (deftest find-by-id-query-test
@@ -18,7 +19,9 @@
           result (queries/find-by-id-query user-id)]
       (is (= {:select [:*]
               :from [:nexus.users]
-              :where [:= :id user-id]}
+              :where [:and
+                      [:= :id user-id]
+                      [:= nil :deleted_at]]}
              result)))))
 
 (deftest insert-user-query-test
