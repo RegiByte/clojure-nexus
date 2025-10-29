@@ -159,7 +159,7 @@
            {::exception/default (exception-handler "Unhandled exception" options)
             ::errors/unauthorized (known-exception-handler "Failed to authenticate")
             ::errors/conflict (known-exception-handler "Conflict")
-            ::errors/validation (known-exception-handler "Validation failedd")
+            ::errors/validation (known-exception-handler "Validation failed")
             ::errors/not-found (known-exception-handler "Not found")}))
    ;; decoding request body
    muuntaja/format-request-middleware

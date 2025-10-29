@@ -1,9 +1,7 @@
 (ns nexus.test.users.http-handlers-test
   "Tests for user HTTP handlers - both happy and unhappy paths"
   (:require
-   [clj-http.client :as http]
    [clojure.test :as t :refer [deftest is testing use-fixtures]]
-   [jsonista.core :as json]
    [nexus.test.test-system :as test-system]
    [nexus.users.http-handlers :as handlers]))
 

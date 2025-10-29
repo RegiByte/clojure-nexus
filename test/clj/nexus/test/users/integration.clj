@@ -5,8 +5,7 @@
    [jsonista.core :as json]
    [nexus.shared.strings :as strings]
    [nexus.test.helpers :as th]
-   [nexus.test.test-system :as test-system]
-   [nexus.users.http-handlers :as handlers]))
+   [nexus.test.test-system :as test-system]))
 
 
 ;; ============================================================================
@@ -83,7 +82,7 @@
               base-url (th/server->host server)
 
               ;; Register first user
-              register-response (th/http-request :post
+              _ (th/http-request :post
                                                  (str base-url "/api/users/register")
                                                  {:body test-user-data})
 

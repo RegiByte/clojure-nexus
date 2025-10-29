@@ -114,8 +114,6 @@
   (let [context (:context request)
         user-id (-> request :parameters :path :id)
         user (users/find-by-id context user-id)]
-    (println "found user" {:user-id user-id
-                           :user user})
     (if user
       {:status 200
        :body (sanitize-user user)}
