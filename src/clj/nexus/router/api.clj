@@ -7,24 +7,6 @@
    [reitit.openapi :as openapi]
    [reitit.ring.malli :as malli]))
 
-(defn secure-route []
-  ["/secure"
-   {:tags #{"secure"}
-    :openapi {:security [{"auth" []}]}
-    :swagger {:security [{"auth" []}]}}
-
-   ["/get"
-    {:get {:summary "endpoint authenticated with a header"
-           :responses {200 {:body [:map [:secret :string]]}
-                       401 {:body [:map [:error :string]]}}
-           :handler (fn [request]
-                      ;; In a real app authentication would be handled by middleware
-                      (if (= "secret" (get-in request [:headers "x-api-key"]))
-                        {:status 200
-                         :body {:secret "I am a marmot"}}
-                        {:status 401
-                         :body {:error "unauthorized"}}))}}]])
-
 (defn auth-routes []
   ["/auth"
    {:tags #{"auth"}}
@@ -216,8 +198,7 @@
               :handler user-handlers/change-password-handler}}]]]])
 
 (defn example-routes []
-  [(secure-route)
-   (math-routes)
+  [(math-routes)
    (file-routes)])
 
 (defn routes
