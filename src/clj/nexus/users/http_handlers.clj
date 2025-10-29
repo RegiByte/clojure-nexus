@@ -4,7 +4,7 @@
    [nexus.auth.middleware :as auth-middleware]
    [nexus.shared.maps :as maps]
    [nexus.users.schemas :as user-schemas]
-   [nexus.users.service :as users]))
+   [nexus.users.service :as service]))
 
 ;; ============================================================================
 ;; Response Schemas for OpenAPI
@@ -75,7 +75,7 @@
   [request]
   (let [context (:context request)
         user-data (-> request :parameters :body)
-        created-user (users/register-user! context user-data)
+        created-user (service/register-user! context user-data)
         sanitized (sanitize-user created-user)]
     {:status 201
      :body {:message "User registered successfully"
@@ -86,7 +86,7 @@
   [request]
   (let [context (:context request)
         credentials (-> request :parameters :body)
-        {:keys [token user]} (users/authenticate-user context credentials)
+        {:keys [token user]} (service/authenticate-user context credentials)
         sanitized (sanitize-user user)]
     {:status 200
      :body {:message "Logged in successfully"
@@ -103,7 +103,7 @@
   (auth-middleware/ensure-authenticated! request)
   (let [context (:context request)
         params (-> request :parameters :query (or {}))
-        users-list (users/list-users context params)]
+        users-list (service/list-users context params)]
     {:status 200
      :body (mapv sanitize-user users-list)}))
 
@@ -113,7 +113,7 @@
   (auth-middleware/ensure-authenticated! request)
   (let [context (:context request)
         user-id (-> request :parameters :path :id)
-        user (users/find-by-id context user-id)]
+        user (service/find-by-id context user-id)]
     (if user
       {:status 200
        :body (sanitize-user user)}
@@ -127,7 +127,7 @@
   (let [context (:context request)
         user-id (-> request :parameters :path :id)
         updates (-> request :parameters :body maps/->snake_map)
-        updated-user (users/update-user! context user-id updates)]
+        updated-user (service/update-user! context user-id updates)]
     (if updated-user
       {:status 200
        :body {:message "User updated successfully"
@@ -141,7 +141,7 @@
   (auth-middleware/ensure-authenticated! request)
   (let [context (:context request)
         user-id (-> request :parameters :path :id)
-        deleted-user (users/delete-user! context user-id)]
+        deleted-user (service/delete-user! context user-id)]
     (if deleted-user
       {:status 200
        :body {:message "User deleted successfully"
@@ -156,7 +156,7 @@
   (let [context (:context request)
         user-id (-> request :parameters :path :id)
         {:keys [old-password new-password]} (-> request :parameters :body)
-        updated-user (users/change-password!
+        updated-user (service/change-password!
                       context
                       {:user-id user-id
                        :old-password old-password
@@ -171,6 +171,6 @@
   (auth-middleware/ensure-authenticated! request)
   (let [context (:context request)
         search-term (-> request :parameters :query :q)
-        results (users/search context search-term)]
+        results (service/search context search-term)]
     {:status 200
      :body (mapv sanitize-user results)}))

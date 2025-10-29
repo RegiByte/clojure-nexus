@@ -94,7 +94,7 @@
       (let [new-hash (hashing/hash-password new-password)
             query (queries/update-password-query user-id new-hash)]
         (tel/log! {:msg     "Password changed successfully"
-                   :user-id user-id})
+                   :data {:user-id user-id}})
         (db/exec-one! db query))
       (throw (errors/unauthorized "Invalid password" {:user-id user-id})))
     (throw (errors/unauthorized "User not found" {:user-id user-id}))))
@@ -115,8 +115,8 @@
   (when (seq updates)
     (let [query (queries/update-user-query id updates)]
       (tel/log! {:msg     "User updated"
-                 :user-id id
-                 :fields  (keys updates)})
+                 :data {:user-id id
+                        :fields  (keys updates)}})
       (db/exec-one! db query))))
 
 (defn delete-user!
@@ -125,7 +125,7 @@
   (validate! schemas/UserIdParam {:id id})
   (let [query (queries/soft-delete-user-query id)]
     (tel/log! {:msg     "User soft deleted"
-               :user-id id})
+               :data {:user-id id}})
     (db/exec-one! db query)))
 
 (defn search
