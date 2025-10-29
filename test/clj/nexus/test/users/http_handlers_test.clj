@@ -4,8 +4,6 @@
    [clj-http.client :as http]
    [clojure.test :as t :refer [deftest is testing use-fixtures]]
    [jsonista.core :as json]
-   [nexus.shared.strings :as strings]
-   [nexus.test.helpers :as th]
    [nexus.test.test-system :as test-system]
    [nexus.users.http-handlers :as handlers]))
 
@@ -374,79 +372,10 @@
                #"Invalid password"
                (handlers/change-password-handler change-pw-req))))))))
 
-;; ============================================================================
-;; Integration Tests with HTTP Server
-;; ============================================================================
 
-;; TODO: Fix integration tests - currently getting 500 errors due to context structure
-;; The unit tests above provide good coverage for now
-
-(comment
-  (deftest full-registration-and-login-flow-integration-test
-    (testing "Full user registration and login flow via HTTP"
-      (test-system/with-system+server
-        (fn [system]
-          (let [server (-> system :nexus.server/server)
-                port (-> server .getURI .getPort)
-                base-url (str "http://localhost:" port "/api/users")]
-
-            ;; Register user via HTTP
-            (let [register-response (http/post
-                                     (str base-url "/register")
-                                     {:body (json/write-value-as-string test-user-data)
-                                      :content-type :json
-                                      :accept :json
-                                      :throw-exceptions false})]
-              (is (= 201 (:status register-response)))
-              (let [body (json/read-value (:body register-response) json/keyword-keys-object-mapper)]
-                (is (= "User registered successfully" (:message body)))
-                (is (= "john.doe@example.com" (-> body :user :email)))))
-
-            ;; Login via HTTP
-            (let [login-response (http/post
-                                  (str base-url "/login")
-                                  {:body (json/write-value-as-string
-                                          {:email (:email test-user-data)
-                                           :password (:password test-user-data)})
-                                   :content-type :json
-                                   :accept :json
-                                   :throw-exceptions false})]
-              (is (= 200 (:status login-response)))
-              (let [body (json/read-value (:body login-response) json/keyword-keys-object-mapper)]
-                (is (= "Logged in successfully" (:message body)))
-                (is (string? (:token body)))
-
-                ;; Use token to list users
-                (let [token (:token body)
-                      list-response (http/get
-                                     base-url
-                                     {:headers {"Authorization" (str "Bearer " token)}
-                                      :accept :json
-                                      :throw-exceptions false})]
-                  (is (= 200 (:status list-response)))
-                  (let [users (json/read-value (:body list-response) json/keyword-keys-object-mapper)]
-                    (is (vector? users))
-                    (is (>= (count users) 1))))))))))))
-
-(deftest unauthorized-access-integration-test
-  (testing "Cannot access protected endpoints without token via HTTP"
-    (test-system/with-system+server
-      (fn [system]
-        (let [server (-> system :nexus.server/server)
-              port (-> server .getURI .getPort)
-              base-url (str "http://localhost:" port "/api/users")
-
-              ;; Try to list users without token
-              response (http/get
-                        base-url
-                        {:accept :json
-                         :throw-exceptions false})]
-          (is (= 401 (:status response)))))))) ;; end comment for integration tests
 
 (comment
   (t/run-tests)
-
-  (t/run-test unauthorized-access-integration-test)
 
   ;
   )
