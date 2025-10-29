@@ -228,6 +228,7 @@
   ;; List running containers
   (get-running-containers)
   ;; Stop container based on index
-  (stop-containers! 0)
+  (stop-containers! 0 1)
+  
   ;
   )

@@ -4,7 +4,7 @@
    [next.jdbc :as jdbc]
    [nexus.test.containers :as containers]
    [nexus.test.helpers :as h]
-   [nexus.test.system :as test-sys]))
+   [nexus.test.test-system :as test-sys]))
 
 (t/deftest one-eq-one
   (t/testing "One equals one! if this doesn't pass nothing will"
@@ -103,5 +103,6 @@
   (t/run-test multiple-servers-run-simultaneously)
 
 
+  (t/run-all-tests)
   ; paren gate
   )

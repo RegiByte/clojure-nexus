@@ -1,4 +1,4 @@
-(ns nexus.test.system
+(ns nexus.test.test-system
   "Test system management with Integrant and testcontainers"
   (:require
    [integrant.core :as ig]
@@ -7,21 +7,46 @@
    [taoensso.telemere :as tel]))
 
 ;; =============================================================================
+;; Manual Namespace Loading
+;; =============================================================================
+(defn- load-required-namespaces!
+  "Manually loads namespaces needed for testing.
+   Including those that contain a ig/init-key call
+   
+   After loading, we override the production :nexus.db/connection method
+   with our test-specific version that accepts a datasource directly."
+  []
+  ;; Load only what you need for tests
+  (require 'nexus.auth.jwt)      ;; JWT service
+  (require 'nexus.server)        ;; Server app
+  ;; Add other services as needed
+  )
+
+;; =============================================================================
 ;; Test-specific Integrant component implementations
 ;; =============================================================================
 ;; These override the production implementations from nexus.db
 ;; We define them here so we can inject the test database directly
+;; IMPORTANT: These must be defined AFTER load-required-namespaces! is called
+;; to ensure they override the production methods
 
-(defmethod ig/init-key :nexus.db/connection [_ {:keys [datasource]}]
-  ;; Returns the DB, as Hydrated by the test settings
-  datasource)
-(defmethod ig/halt-key! :nexus.db/connection
-  [_ _connection]
-  ;; No-op for test DB - containers/with-test-db handles cleanup
-  nil)
+(defn- setup-test-db-methods!
+  "Defines test-specific Integrant methods for database components.
+   
+   This must be called after nexus.db is loaded to properly override
+   the production methods."
+  []
+  (defmethod ig/init-key :nexus.db/connection [_ {:keys [datasource]}]
+    ;; Returns the DB, as Hydrated by the test settings
+    datasource)
+
+  (defmethod ig/halt-key! :nexus.db/connection
+    [_ _connection]
+    ;; No-op for test DB - containers/with-test-db handles cleanup
+    nil))
 
 ;; =============================================================================
-;; Configuration Loading (without automatic namespace loading)
+;; Configuration Loading
 ;; =============================================================================
 
 (defn- test-config
@@ -33,26 +58,11 @@
 
   (let [base-config (system/load-config {:config "test.config.edn"
                                          :profile :test})]
+    ;; After load-config calls ig/load-namespaces (which loads nexus.db),
+    ;; we need to re-establish our test overrides
+    (setup-test-db-methods!)
     (-> base-config
         (assoc :nexus.db/connection {:datasource test-db}))))
-
-;; =============================================================================
-;; Manual Namespace Loading
-;; =============================================================================
-(defn- load-required-namespaces!
-  "Manually loads namespaces needed for testing.
-   Including those that contain a ig/init-key call
-   
-   We do this manually instead of using ig/load-namespaces to avoid
-   loading production database initialization code."
-  []
-  ;; Load only what you need for tests
-  (require 'nexus.auth.jwt)      ;; JWT service
-  (require 'nexus.users.service) ;; Users service
-  (require 'nexus.server)        ;; Server app
-  ;; Add other services as needed
-  ;; Notably: we DON'T require 'nexus.db because we override its methods here
-  )
 
 (defn setup-logging!
   []
@@ -81,7 +91,7 @@
    (with-system
      (fn [system]
        (let [db (-> system :nexus.db/connection)
-             users-service (-> system :nexus.users/service)]
+             jwt-service (-> system :nexus.auth/jwt)]
          (is (= ...)))))"
   [test-fn]
   ;; Load namespaces once (idempotent)
@@ -114,7 +124,7 @@
    (with-system
      (fn [system]
        (let [db (-> system :nexus.db/connection)
-             users-service (-> system :nexus.users/service)]
+             jwt-service (-> system :nexus.auth/jwt)]
          (is (= ...)))))"
   [test-fn]
   ;; Load namespaces once (idempotent)
@@ -139,6 +149,9 @@
 (comment
   (with-system (fn [system]
                  (println system)))
+
+  (with-system+server (fn [system]
+                        (println system)))
 
 
   ;

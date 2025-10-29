@@ -31,6 +31,9 @@
   (stop)
   (restart)
   (system)
+  (inc 2)
+
+
   ;; Testing Users service
   (defn user-deps [] {:db (connection)
                       :jwt (services:jwt)})
@@ -64,11 +67,11 @@
    (user-deps)
    {:offset 0
     :limit 50})
-  
+
   (users/delete-user!
    (user-deps)
    #uuid "4437d63a-c70e-4d8f-8ebc-515c4e71457b")
-  
+
 
   ;; Testing Users service
   )
@@ -104,8 +107,8 @@
 
   ;; List all tables except system and public ones
   (jdbc/execute! (connection)
-                 ["SELECT schemaname, tablename 
-      FROM pg_tables 
+                 ["SELECT schemaname, tablename
+      FROM pg_tables
       WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'public')
       ORDER BY schemaname, tablename"])
 

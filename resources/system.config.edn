@@ -10,10 +10,6 @@
  ;; Security
  :nexus.auth/jwt {:options {:jwt-secret #ref [:nexus.system/env :jwt-secret]}}
 
- ;; Services
- :nexus.users/service {:deps {:db #ig/ref :nexus.db/connection
-                              :jwt #ig/ref :nexus.auth/jwt}}
-
  ;; HTTP Server
  :nexus.server/app {:options {:hot-reload? #profile {:dev true
                                                      :prod false}
@@ -22,8 +18,7 @@
                               :show-error-stacks? #profile {:dev true
                                                             :prod false}}
                     :deps {:db #ig/ref :nexus.db/connection
-                           :users-service #ig/ref :nexus.users/service
-                           :jwt-service #ig/ref :nexus.auth/jwt}}
+                           :jwt #ig/ref :nexus.auth/jwt}}
  :nexus.server/server {:options {:port #ref [:nexus.system/env :port]}
                        :deps {:app #ig/ref :nexus.server/app}}
  ;;

@@ -6,6 +6,14 @@
 ;; Query Builders
 ;; ============================================================================
 
+(def public-fields [:id
+                    :first_name
+                    :last_name
+                    :middle_name
+                    :email
+                    :created_at
+                    :updated_at])
+
 (defn not-deleted []
   [:= nil :deleted_at])
 
@@ -32,7 +40,7 @@
              :middle_name middle-name
              :email email
              :password_hash password-hash}]
-   :returning [:id :first_name :last_name :middle_name :email :created_at]})
+   :returning public-fields})
 
 (defn list-users-query
   "Build query to list users with pagination"

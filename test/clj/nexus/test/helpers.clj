@@ -68,7 +68,7 @@
     (str "http://localhost:" port)))
 
 (defn http-request
-  "Makes an HTTP request using clj-http. Much simpler and more feature-rich.
+  "Makes an HTTP request using clj-http.
    
    Parameters:
    - method: :get, :post, :put, :delete, :patch, :head, :options
@@ -92,6 +92,11 @@
                        :accept :json
                        :throw-exceptions false  ; Don't throw on 4xx/5xx
                        :coerce :always}         ; Always try to parse JSON
+         ;; If body is a map, JSON-encode it
+         options (if (and (map? (:body options))
+                          (not (string? (:body options))))
+                   (update options :body json/write-value-as-string)
+                   options)
          opts (merge default-opts options)]
      (case method
        :get (http/get url opts)

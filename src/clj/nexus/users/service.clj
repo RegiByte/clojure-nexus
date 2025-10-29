@@ -46,20 +46,20 @@
   "Register a new user with hashed password"
   [{:keys [db]} {:keys [first-name last-name middle-name email password] :as data}]
   (validate! schemas/UserRegistration data)
-  (tel/log! {:msg "User registration - validation passed"
+  (tel/log! {:msg  "User registration - validation passed"
              :data (dissoc data :password)})
-  
+
   (when (find-by-email {:db db} email)
     (throw (errors/conflict
             "Email already registered"
             {:email email})))
-  
+
   (let [password-hash (hashing/hash-password password)
         query (queries/insert-user-query
-               {:first-name first-name
-                :last-name last-name
-                :middle-name middle-name
-                :email email
+               {:first-name    first-name
+                :last-name     last-name
+                :middle-name   middle-name
+                :email         email
                 :password-hash password-hash})]
     (db/exec-one! db query)))
 
@@ -67,16 +67,19 @@
   "Authenticate user and return JWT token"
   [{:keys [db jwt]} {:keys [email password] :as credentials}]
   (validate! schemas/LoginCredentials credentials)
-  
+
   (if-let [user (db/exec-one! db (queries/find-by-email-query email))]
     (let [sanitized-user (-> user
                              (dissoc :users/password_hash)
                              (maps/unqualify-keys*))]
-      (tel/log! {:msg "User authentication attempt"
+      (tel/log! {:msg   "User authentication attempt"
                  :email email})
       (if (hashing/verify-password password (:users/password_hash user))
-        {:token ((:generate-token jwt) sanitized-user {:claims {:roles ["admin" "user"]}})
-         :user sanitized-user}
+        {:token ((:generate-token jwt)
+                 sanitized-user
+                 {:claims {:roles ["admin" "user"]}})
+         ; return original user - non sanitized, http handler should do it
+         :user user}
         (throw (errors/unauthorized "Invalid credentials" {:email email}))))
     (throw (errors/unauthorized "Invalid credentials" {:email email}))))
 
@@ -85,12 +88,12 @@
   "Change a user's password"
   [{:keys [db]} {:keys [user-id old-password new-password] :as data}]
   (validate! schemas/ChangePassword data)
-  
+
   (if-let [user (find-by-id {:db db} user-id)]
     (if (hashing/verify-password old-password (:users/password_hash user))
       (let [new-hash (hashing/hash-password new-password)
             query (queries/update-password-query user-id new-hash)]
-        (tel/log! {:msg "Password changed successfully"
+        (tel/log! {:msg     "Password changed successfully"
                    :user-id user-id})
         (db/exec-one! db query))
       (throw (errors/unauthorized "Invalid password" {:user-id user-id})))
@@ -111,9 +114,9 @@
   (validate! schemas/UpdateUser {:id id :updates updates})
   (when (seq updates)
     (let [query (queries/update-user-query id updates)]
-      (tel/log! {:msg "User updated"
+      (tel/log! {:msg     "User updated"
                  :user-id id
-                 :fields (keys updates)})
+                 :fields  (keys updates)})
       (db/exec-one! db query))))
 
 (defn delete-user!
@@ -121,7 +124,7 @@
   [{:keys [db]} id]
   (validate! schemas/UserIdParam {:id id})
   (let [query (queries/soft-delete-user-query id)]
-    (tel/log! {:msg "User soft deleted"
+    (tel/log! {:msg     "User soft deleted"
                :user-id id})
     (db/exec-one! db query)))
 

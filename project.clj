@@ -18,8 +18,10 @@
 
                  ;; Validation
                  [metosin/malli "0.17.0"]
-                 ;; Json
+                 ;; Data Conversion
                  [metosin/jsonista "0.3.13"]
+                 [camel-snake-kebab "0.4.3"]
+
                  ;; HTTP Requests
                  [clj-http "3.13.1"]
 
@@ -62,7 +64,7 @@
                                   ;; Testing
                                   [org.testcontainers/testcontainers "1.20.3"]
                                   [org.testcontainers/postgresql "1.20.3"]]
-                   :repl-options {:init-ns user}}
+                   :repl-options {:init-ns nexus.user}}
              :cljs {:source-paths ["src/cljs" "test/cljs"]
                     :dependencies [;; ClojureScript dev deps
                                    [thheller/shadow-cljs "2.28.17"]
