@@ -31,6 +31,3 @@ pom.xml.asc
 node_modules/
 resources/public/js/
 .nrepl-port
-
-# Frontend build
-resources/public
