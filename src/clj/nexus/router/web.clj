@@ -2,63 +2,27 @@
   (:require
    [clojure.java.io :as io]
    [jsonista.core :as jsonista]
-   [nexus.auth.middleware :as auth-middleware]
-   [nexus.shared.maps :as maps]
-   [nexus.users.schemas :as user-schemas]
-   [nexus.users.service :as users]))
+   [nexus.auth.http-handlers :as auth-handlers]
+   [nexus.users.schemas :as user-schemas]))
 
 (defn auth-routes []
   ["/auth" {}
    [["/login" {:name :web-login
                :summary "Signs in a user through cookies"
                :post {:parameters {:body user-schemas/LoginCredentials}
-                      :responses {200 {:body [:map
-                                              [:message :string]
-                                              [:user [:map {:closed false}]]]}}
-                      :handler (fn [request]
-                                 (try
-                                   (let [context (:context request)
-                                         {:keys [email password]} (-> request :parameters :body)
-                                         {:keys [token user]}
-                                         (users/authenticate-user
-                                          context
-                                          {:email email
-                                           :password password})]
-                                     {:status 200
-                                      :cookies {"auth-token" {:value token
-                                                              :http-only true
-                                                              :secure false
-                                                              :same-site :lax
-                                                              :max-age (* 24 60 60)
-                                                              :path "/"}}
-                                      :body {:message "Logged in successfully"
-                                             :user (maps/unqualify-keys* user)}})
-                                   (catch Exception e
-                                     ;; Handle auth error
-                                     {:status 401
-                                      :body {:error (ex-message e)}})))}}]
+                      :responses {200 {:body auth-handlers/WebAuthResponse}
+                                  401 {:body auth-handlers/ErrorResponse}}
+                      :handler auth-handlers/login-handler}}]
     ["/logout" {:name :web-logout
                 :summary "Removes auth cookie"
-                :post {:responses {200 {:body [:map [:message :string]]}}
-                       :handler (fn [_request]
-                                  {:status 200
-                                   :cookies {"auth-token" {:value ""
-                                                           :max-age 0
-                                                           :path "/"}}
-                                   :body {:message "Logged out successfully"}})}}]
+                :post {:responses {200 {:body auth-handlers/WebLogoutResponse}}
+                       :handler auth-handlers/logout-handler}}]
 
     ["/me" {:name :web-me
             :summary "Shows info about current logged in user"
-            :get {:responses {200 {:body [:map [:user [:map {:closed false}]]]}
-                              401 {:body [:map [:error :string]]}}
-                  :handler (fn [request]
-                             (tap> request)
-
-                             (if (auth-middleware/authenticated? request)
-                               {:status 200
-                                :body {:user (auth-middleware/req-identity request)}}
-                               {:status 401
-                                :body {:error "Not authenticated"}}))}}]]])
+            :get {:responses {200 {:body auth-handlers/WebMeResponse}
+                              401 {:body auth-handlers/ErrorResponse}}
+                  :handler auth-handlers/me-handler}}]]])
 
 
 (defn serve-index-html [_request]

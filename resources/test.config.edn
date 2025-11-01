@@ -7,15 +7,13 @@
  ;; Security
  :nexus.auth/jwt {:options {:jwt-secret #ref [:nexus.system/env :jwt-secret]}}
 
- ;; Services
-;;  :nexus.users/service {:deps {:db #ig/ref :nexus.db/connection
-;;                               :jwt #ig/ref :nexus.auth/jwt}}
-
  :nexus.server/app {:options {:hot-reload? false
                               :cors-mode :dev
                               :show-error-stacks? true}
                     :deps {:db #ig/ref :nexus.db/connection
                      ;;       :users-service #ig/ref :nexus.users/service
                            :jwt #ig/ref :nexus.auth/jwt}}
- ;
+ 
+ ;; Server is injected a-la-carte in a per-test basis
+ ;; :nexus.server/server {} 
  }

@@ -32,6 +32,11 @@
   [data]
   (cske/transform-keys csk/->snake_case_keyword data))
 
+(defn ->camelCase
+  "Transforms keyword casing into snake_case."
+  [data]
+  (cske/transform-keys csk/->camelCaseKeyword data))
+
 
 (comment
   (def user #:users{:id 1,

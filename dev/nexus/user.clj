@@ -27,11 +27,17 @@
 
 
 (comment
+  ; Lifecycle 
   (start)
   (stop)
   (restart)
   (system)
+  ;
+  )
+
+(comment
   (inc 2)
+  (+ 1 2)
 
 
   ;; Testing Users service
@@ -42,8 +48,14 @@
    {:first-name "Reginaldo"
     :last-name "Junior"
     :middle-name "Adriano"
-    :email "regi+4@test.com"
+    :email "regi+test1@nexus.com"
     :password "somenicepassword"})
+  
+  (println {:first-name "Reginaldo"
+            :last-name "Junior"
+            :middle-name "Adriano"
+            :email "regi+4@test.com"
+            :password "somenicepassword"})
 
   (users/authenticate-user
    (user-deps)
@@ -71,6 +83,12 @@
   (users/delete-user!
    (user-deps)
    #uuid "4437d63a-c70e-4d8f-8ebc-515c4e71457b")
+  
+  (java.util.UUID/fromString "03a8ade1-615c-4dd3-a535-71f5742a063d")
+  
+  (users/find-by-id
+   (user-deps)
+   #uuid "03a8ade1-615c-4dd3-a535-71f5742a063d")
 
 
   ;; Testing Users service

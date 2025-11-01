@@ -77,7 +77,7 @@
       (if (hashing/verify-password password (:users/password_hash user))
         {:token ((:generate-token jwt)
                  sanitized-user
-                 {:claims {:roles ["admin" "user"]}})
+                 {:claims {:roles ["user"]}})
          ; return original user - non sanitized, http handler should do it
          :user user}
         (throw (errors/unauthorized "Invalid credentials" {:email email}))))

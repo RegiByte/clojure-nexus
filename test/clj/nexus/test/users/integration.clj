@@ -74,6 +74,7 @@
           (is (nil? (-> login-response :body :user :password-hash))
               "Password hash should not be in response"))))))
 
+
 (deftest list-users-test
   (testing "Successfully list users with authentication"
     (test-system/with-system+server

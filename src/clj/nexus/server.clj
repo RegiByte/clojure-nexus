@@ -185,8 +185,9 @@
    - mode: :dev or :prod"
   [mode]
   (case mode
-    :dev {:origins [#".*"] ; Allow all origins in development
-          :allow-credentials false}
+    :dev {:origins [#"http://localhost:3000"
+                    #"http://localhost:3456"] ; Allow all origins in development
+          :allow-credentials true}
     :prod {:origins [#"http://example.prod.domain"] ; Restrict in production
            :allow-credentials false}))
 
@@ -293,7 +294,7 @@
    
    This is called by Integrant when starting :nexus.server/app.
    It creates the Ring handler that processes HTTP requests."
-  (tel/log! :info "initializing server handler") 
+  (tel/log! :info "initializing server handler")
   (create-root-handler options deps))
 
 (defmethod ig/init-key ::server [_ {:keys [options deps]}]
