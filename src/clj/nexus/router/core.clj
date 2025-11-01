@@ -11,5 +11,6 @@
   []
   [["/api", {:tags #{:api}}, (nexus-api/routes)]
    ["", {:tags #{:web}}, (web-api/routes)]
+
    ;
    ])

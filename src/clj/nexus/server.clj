@@ -25,7 +25,8 @@
    [ring.middleware.cors :as cors]
    [ring.middleware.default-charset :as default-charset]
    [ring.middleware.x-headers :as x-headers]
-   [taoensso.telemere :as tel]))
+   [taoensso.telemere :as tel]
+   [clojure.java.io :as io]))
 
 
 ;; Error Handling
@@ -95,10 +96,15 @@
   "Handles 404 Not Found responses.
    
    Called when no route matches the request path."
-  [_request]
-  {:status 404
-   :headers {"Content-Type" "application/json"}
-   :body (jsonista/write-value-as-string {:error "Not Found"})})
+  [request]
+  (if (str/starts-with? (:uri request) "/api")
+    {:status 404
+     :headers {"Content-Type" "application/json"}
+     :body (jsonista/write-value-as-string {:error "Not Found"})}
+    {:status 200
+     :headers {"Content-Type" "text/html"}
+     :body (slurp (io/resource "public/index.html"))})
+  )
 
 (defn wrap-context-deps
   "Add app dependencies of handler to request as a context key."
@@ -215,7 +221,8 @@
     ;; Create the router with data-driven middleware
     router (ring/router
             routes
-            {:exception pretty/exception
+            {:conflicts (constantly nil)
+             :exception pretty/exception
              :data {:muuntaja muuntaja-core/instance
                     :coercion (reitit.coercion.malli/create
                                {;; set of keys to include in error messages
@@ -241,7 +248,7 @@
              (ring/routes
               (ring/redirect-trailing-slash-handler)  ; /path/ -> /path
               (ring/create-resource-handler {:root "public"
-                                             :path "/static"}) ; Serve files from resources/public at /static
+                                             :path "/"}) ; Serve files from resources/public at /
               (swagger-ui/create-swagger-ui-handler {:path "/api/docs"
                                                      :config {:validatorUrl nil
                                                               :urls [{:name "Main API" :url "/api/openapi.json"}]

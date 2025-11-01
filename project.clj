@@ -51,8 +51,7 @@
   :main ^:skip-aot nexus.core
   :target-path "target/%s"
 
-  :aliases {"build-frontend" ["shell" "npm" "run" "build"]
-            "uberjar-full" ["do" ["build-frontend"] ["uberjar"]]}
+  :aliases {"uberjar-full" ["do" ["uberjar"]]}
 
   :profiles {:uberjar {:aot :all
                        :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}
@@ -64,9 +63,4 @@
                                   ;; Testing
                                   [org.testcontainers/testcontainers "1.20.3"]
                                   [org.testcontainers/postgresql "1.20.3"]]
-                   :repl-options {:init-ns nexus.user}}
-             :cljs {:source-paths ["src/cljs" "test/cljs"]
-                    :dependencies [;; ClojureScript dev deps
-                                   [thheller/shadow-cljs "2.28.17"]
-                                   [reagent "1.2.0"]
-                                   [re-frame "1.4.3"]]}})
+                   :repl-options {:init-ns nexus.user}}})

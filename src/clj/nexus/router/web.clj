@@ -36,23 +36,17 @@
 (defn routes
   " Returns the application web routes, thing acessible to users and such "
   []
-  [["/" {:name :homepage
+  [(auth-routes)
+
+   ["/" {:name :homepage
          :get {:handler ; Homepage route 
                serve-index-html}}]
-   ["/hello/:name"
-    {:name :hello
-     :get {:handler (fn [request]
-                      (tap> request)
-                      {:status 200
-                       :headers {"Content-Type" "text/html"
-                                 "x-original-params" (jsonista/write-value-as-string (:query-params request))}
-                       :body (str "Hey " (-> request :path-params :name) "! how are you?")})}}]
 
 
-   ["/app/*path" {:get {:handler ; Homepage route 
-                        serve-index-html}}]
+  ;;  ["/*path" {:conflicting true
+  ;;             :get {:handler ; Homepage route 
+  ;;                   serve-index-html}}]
 
-   (auth-routes)
    ;
    ]
   ; End Web Routes
