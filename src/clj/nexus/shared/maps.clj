@@ -32,7 +32,7 @@
   [data]
   (cske/transform-keys csk/->snake_case_keyword data))
 
-(defn ->camelCase
+(defn ->camelCaseMap
   "Transforms keyword casing into snake_case."
   [data]
   (cske/transform-keys csk/->camelCaseKeyword data))
@@ -61,6 +61,11 @@
                 :this {:is-awesome :yes!,
                        :how {:many-levels
                              {:does-this {:goes :bro?}}}}})
+  
+  (->camelCaseMap {:foo-bar "broo",
+                :this {:is_awesome :yes!,
+                       :how {:many-levels
+                             {:does-this {:goes_on :bro?}}}}})
 
 
   ;
