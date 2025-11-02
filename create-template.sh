@@ -160,6 +160,11 @@ main() {
         mv "test/clj/nexus" "test/clj/$PROJECT_SNAKE"
         log_success "Renamed test/clj/nexus → test/clj/$PROJECT_SNAKE"
     fi
+
+    if [ -f "frontend/.env.example" ]; then
+        mv "frontend/.env.example" "frontend/.env.local"
+        log_success "Copied frontend/.env.example → frontend/.env.local"
+    fi
     
     echo ""
 
