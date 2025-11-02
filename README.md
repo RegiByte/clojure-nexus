@@ -435,11 +435,7 @@ nexus/
 │   │   ├── prod.edn            # Production config
 │   │   └── template.edn        # Config template
 │   ├── migrations/             # Database migrations (Migratus)
-│   │   ├── 20251014223555-add-nexus-schema.up.sql
-│   │   └── 20251014223928-add-users-table.up.sql
-│   └── public/                 # Static assets & compiled frontend
-│       ├── index.html
-│       └── assets/             # Vite build output
+│   └── public/                 # Vite build output
 │
 ├── dev/nexus/                  # Development utilities
 │   ├── user.clj                # REPL helpers (start, stop, restart)
