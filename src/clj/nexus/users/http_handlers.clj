@@ -99,7 +99,6 @@
   (let [context (:context request)
         user-id (-> request :parameters :path :id)
         updates (-> request :parameters :body maps/->snake_map)
-        _ (println {:msg "Updating user" :data {:user-id user-id :updates updates}})
         updated-user (service/update-user! context user-id updates)]
     (if updated-user
       {:status 200
