@@ -3,54 +3,13 @@
   (:require
    [nexus.auth.middleware :as auth-middleware]
    [nexus.shared.maps :as maps]
-   [nexus.users.schemas :as user-schemas]
-   [nexus.users.service :as service]))
+   [nexus.users.service :as service]
+   [taoensso.telemere :as tel]))
 
 ;; ============================================================================
-;; Response Schemas for OpenAPI
+;; Note: Response schemas are now defined in nexus.users.schemas.api
+;; This keeps the HTTP layer focused on handlers and routing
 ;; ============================================================================
-
-(def User
-  "User response schema"
-  [:map
-   [:id :uuid]
-   [:email :string]
-   [:first-name :string]
-   [:last-name :string]
-   [:middle-name {:optional true} [:maybe :string]]
-   [:created-at inst?]
-   [:updated-at inst?]])
-
-(def UserList
-  "List of users response schema"
-  [:sequential User])
-
-(def AuthResponse
-  "Authentication response schema"
-  [:map
-   [:message :string]
-   [:token :string]
-   [:user User]])
-
-(def ErrorResponse
-  "Error response schema"
-  [:map
-   [:error :string]
-   [:details {:optional true} :any]])
-
-(def SuccessResponse
-  "Generic success response"
-  [:map
-   [:message :string]
-   [:user {:optional true} User]])
-
-(def ChangePasswordSuccessResponse
-  "Generic success response"
-  [:map
-   [:message :string]
-   [:user {:optional true} [:map
-                            [:id user-schemas/UUIDSchema]
-                            [:email user-schemas/EmailSchema]]]])
 
 
 ;; ============================================================================
@@ -64,7 +23,7 @@
   (-> user
       (dissoc :users/password_hash :password_hash)
       (maps/unqualify-keys*)
-      (maps/->kebab-map)))
+      (maps/->camelCaseMap)))
 
 ;; ============================================================================
 ;; Public Handlers (No Authentication Required)
@@ -74,8 +33,8 @@
   "Register a new user"
   [request]
   (let [context (:context request)
-        user-data (-> request :parameters :body)
-        created-user (service/register-user! context user-data)
+        domain-data (-> request :parameters :body maps/->kebab-map)
+        created-user (service/register-user! context domain-data)
         sanitized (sanitize-user created-user)]
     {:status 201
      :body {:message "User registered successfully"
@@ -127,6 +86,7 @@
   (let [context (:context request)
         user-id (-> request :parameters :path :id)
         updates (-> request :parameters :body maps/->snake_map)
+        _ (println {:msg "Updating user" :data {:user-id user-id :updates updates}})
         updated-user (service/update-user! context user-id updates)]
     (if updated-user
       {:status 200
@@ -155,7 +115,7 @@
   (auth-middleware/ensure-authenticated! request)
   (let [context (:context request)
         user-id (-> request :parameters :path :id)
-        {:keys [old-password new-password]} (-> request :parameters :body)
+        {:keys [old-password new-password]} (-> request :parameters :body maps/->kebab-map)
         updated-user (service/change-password!
                       context
                       {:user-id user-id

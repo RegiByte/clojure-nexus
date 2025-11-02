@@ -103,8 +103,7 @@
      :body (jsonista/write-value-as-string {:error "Not Found"})}
     {:status 200
      :headers {"Content-Type" "text/html"}
-     :body (slurp (io/resource "public/index.html"))})
-  )
+     :body (slurp (io/resource "public/index.html"))}))
 
 (defn wrap-context-deps
   "Add app dependencies of handler to request as a context key."
@@ -235,7 +234,7 @@
                                 ;; schema identity function (default: close all map schemas)
                                 :compile mu/closed-schema
                                 ;; strip-extra-keys (affects only predefined transformers)
-                                :strip-extra-keys true
+                                :strip-extra-keys false
                                 ;; add/set default values
                                 :default-values true
                                 ;; malli options

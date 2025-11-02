@@ -54,7 +54,7 @@
 
   (->kebab-map {:foo_bar "broo"
                 :this {:is_awesome :yes!
-                       :how {:many_levels
+                       :how {:manyLevels
                              {:does_this {:goes :bro?}}}}})
 
   (->snake_map {:foo-bar "broo",

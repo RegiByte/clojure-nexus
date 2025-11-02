@@ -8,7 +8,7 @@
    [nexus.errors :as errors]
    [nexus.shared.maps :as maps]
    [nexus.users.queries :as queries]
-   [nexus.users.schemas :as schemas]
+   [nexus.users.schemas.domain :as domain-schemas]
    [taoensso.telemere :as tel]))
 
 ;; ============================================================================
@@ -45,7 +45,7 @@
 (defn register-user!
   "Register a new user with hashed password"
   [{:keys [db]} {:keys [first-name last-name middle-name email password] :as data}]
-  (validate! schemas/UserRegistration data)
+  (validate! domain-schemas/UserRegistration data)
   (tel/log! {:msg  "User registration - validation passed"
              :data (dissoc data :password)})
 
@@ -66,7 +66,7 @@
 (defn authenticate-user
   "Authenticate user and return JWT token"
   [{:keys [db jwt]} {:keys [email password] :as credentials}]
-  (validate! schemas/LoginCredentials credentials)
+  (validate! domain-schemas/LoginCredentials credentials)
 
   (if-let [user (db/exec-one! db (queries/find-by-email-query email))]
     (let [sanitized-user (-> user
@@ -87,7 +87,7 @@
 (defn change-password!
   "Change a user's password"
   [{:keys [db]} {:keys [user-id old-password new-password] :as data}]
-  (validate! schemas/ChangePassword data)
+  (validate! domain-schemas/ChangePassword data)
 
   (if-let [user (find-by-id {:db db} user-id)]
     (if (hashing/verify-password old-password (:users/password_hash user))
@@ -104,14 +104,14 @@
 (defn list-users
   "List users with pagination"
   [{:keys [db]} params]
-  (validate! schemas/ListUsersParams params)
+  (validate! domain-schemas/ListUsersParams params)
   (let [query (queries/list-users-query params)]
     (db/exec! db query)))
 
 (defn update-user!
   "Update user fields"
   [{:keys [db]} id updates]
-  (validate! schemas/UpdateUser {:id id :updates updates})
+  (validate! domain-schemas/UpdateUser {:id id :updates updates})
   (when (seq updates)
     (let [query (queries/update-user-query id updates)]
       (tel/log! {:msg     "User updated"
@@ -122,7 +122,9 @@
 (defn delete-user!
   "Soft delete a user"
   [{:keys [db]} id]
-  (validate! schemas/UserIdParam {:id id})
+  ;; Simple UUID validation - no need for full schema
+  (when-not (uuid? id)
+    (throw (errors/validation-error "Invalid user ID" {:id id})))
   (let [query (queries/soft-delete-user-query id)]
     (tel/log! {:msg     "User soft deleted"
                :data {:user-id id}})
@@ -131,6 +133,6 @@
 (defn search
   "Search users by name or email"
   [{:keys [db]} q]
-  (validate! schemas/SearchParams {:q q})
+  (validate! domain-schemas/SearchParams {:q q})
   (let [query (queries/search-users-query q)]
     (db/exec! db query)))

@@ -1,22 +1,7 @@
-import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
-import { authenticatedUserQueryOptions, useAuth } from '@/contexts/auth'
+import { useAuth } from '@/contexts/auth'
+import { createFileRoute, Outlet } from '@tanstack/react-router'
 
-export const Route = createFileRoute('/app')({
-  beforeLoad: async ({ context }) => {
-    const { queryClient } = context
-
-    const auth = await queryClient.ensureQueryData(
-      authenticatedUserQueryOptions(),
-    )
-    if (!auth?.id) {
-      throw redirect({
-        to: '/login',
-        search: {
-          redirect: '/app',
-        },
-      })
-    }
-  },
+export const Route = createFileRoute('/(auth)/app')({
   component: AppLayout,
 })
 

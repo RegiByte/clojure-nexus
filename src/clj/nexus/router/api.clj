@@ -3,7 +3,7 @@
    [clojure.java.io :as io]
    [nexus.auth.middleware :as auth-middleware]
    [nexus.users.http-handlers :as user-handlers]
-   [nexus.users.schemas :as user-schemas]
+   [nexus.users.schemas.api :as api-schemas]
    [reitit.openapi :as openapi]
    [reitit.ring.malli :as malli]))
 
@@ -97,12 +97,12 @@
      :name :api/users-register
      :post {:summary "Register a new user"
             :description "Creates a new user account with the provided information"
-            :parameters {:body user-schemas/UserRegistration}
-            :responses {201 {:body user-handlers/SuccessResponse
+            :parameters {:body api-schemas/UserRegistration}
+            :responses {201 {:body api-schemas/UserResponse
                              :description "User successfully registered"}
-                        400 {:body user-handlers/ErrorResponse
+                        400 {:body api-schemas/ErrorResponse
                              :description "Validation error"}
-                        409 {:body user-handlers/ErrorResponse
+                        409 {:body api-schemas/ErrorResponse
                              :description "Email already registered"}}
             :handler user-handlers/register-handler}}]
 
@@ -111,10 +111,10 @@
      :name :api/users-login
      :post {:summary "Login with email and password"
             :description "Authenticates a user and returns a JWT token"
-            :parameters {:body user-schemas/LoginCredentials}
-            :responses {200 {:body user-handlers/AuthResponse
+            :parameters {:body api-schemas/LoginCredentials}
+            :responses {200 {:body api-schemas/AuthResponse
                              :description "Successfully authenticated"}
-                        401 {:body user-handlers/ErrorResponse
+                        401 {:body api-schemas/ErrorResponse
                              :description "Invalid credentials"}}
             :handler user-handlers/login-handler}}]
 
@@ -126,10 +126,10 @@
      {:name :api/users-list
       :get {:summary "List all users"
             :description "Returns a paginated list of users"
-            :parameters {:query user-schemas/ListUsersParams}
-            :responses {200 {:body user-handlers/UserList
+            :parameters {:query api-schemas/ListUsersParams}
+            :responses {200 {:body api-schemas/UserList
                              :description "List of users"}
-                        401 {:body user-handlers/ErrorResponse
+                        401 {:body api-schemas/ErrorResponse
                              :description "Unauthorized"}}
             :handler user-handlers/list-users-handler}}]
 
@@ -138,47 +138,48 @@
       :name :api/users-search
       :get {:summary "Search users"
             :description "Search users by name or email"
-            :parameters {:query user-schemas/SearchParams}
-            :responses {200 {:body user-handlers/UserList
+            :parameters {:query api-schemas/SearchParams}
+            :responses {200 {:body api-schemas/UserList
                              :description "Search results"}
-                        401 {:body user-handlers/ErrorResponse
+                        401 {:body api-schemas/ErrorResponse
                              :description "Unauthorized"}}
             :handler user-handlers/search-users-handler}}]
 
     ["/:id"
      {:conflicting true
-      :parameters {:path user-schemas/UserIdParam}}
+      :parameters {:path api-schemas/UserIdParam}}
 
      [""
       {:get {:name :api/users-get
              :summary "Get user by ID"
              :description "Returns a single user by their ID"
-             :responses {200 {:body user-handlers/User
+             :responses {200 {:body api-schemas/User
                               :description "User found"}
-                         401 {:body user-handlers/ErrorResponse
+                         401 {:body api-schemas/ErrorResponse
                               :description "Unauthorized"}
-                         404 {:body user-handlers/ErrorResponse
+                         404 {:body api-schemas/ErrorResponse
                               :description "User not found"}}
              :handler user-handlers/get-user-handler}
        :patch {:name :api/users-update
                :summary "Update user"
                :description "Updates user information"
-               :parameters {:body [:map-of :keyword :any]}
-               :responses {200 {:body user-handlers/SuccessResponse
+               :parameters {:body api-schemas/UpdateUserRequestBody
+                            :path api-schemas/UpdateUserRequestParameters}
+               :responses {200 {:body api-schemas/UserResponse
                                 :description "User updated"}
-                           401 {:body user-handlers/ErrorResponse
+                           401 {:body api-schemas/ErrorResponse
                                 :description "Unauthorized"}
-                           404 {:body user-handlers/ErrorResponse
+                           404 {:body api-schemas/ErrorResponse
                                 :description "User not found"}}
                :handler user-handlers/update-user-handler}
        :delete {:name :api/users-delete
                 :summary "Delete user"
                 :description "Soft deletes a user"
-                :responses {200 {:body user-handlers/SuccessResponse
+                :responses {200 {:body api-schemas/UserResponse
                                  :description "User deleted"}
-                            401 {:body user-handlers/ErrorResponse
+                            401 {:body api-schemas/ErrorResponse
                                  :description "Unauthorized"}
-                            404 {:body user-handlers/ErrorResponse
+                            404 {:body api-schemas/ErrorResponse
                                  :description "User not found"}}
                 :handler user-handlers/delete-user-handler}}]
 
@@ -186,14 +187,12 @@
       {:name :api/users-change-password
        :post {:summary "Change user password"
               :description "Changes the password for a user"
-              :parameters {:body [:map
-                                  [:old-password [:string {:min 1}]]
-                                  [:new-password user-schemas/PasswordSchema]]}
-              :responses {200 {:body user-handlers/ChangePasswordSuccessResponse
+              :parameters {:body api-schemas/ChangePasswordRequest}
+              :responses {200 {:body api-schemas/ChangePasswordResponse
                                :description "Password changed"}
-                          401 {:body user-handlers/ErrorResponse
+                          401 {:body api-schemas/ErrorResponse
                                :description "Unauthorized or invalid password"}
-                          404 {:body user-handlers/ErrorResponse
+                          404 {:body api-schemas/ErrorResponse
                                :description "User not found"}}
               :handler user-handlers/change-password-handler}}]]]])
 
@@ -206,8 +205,8 @@
   []
   [["/health" {:name :api/health
                :get {:summary "Pings the server and check if everything is okay"
+                     :responses {200 {:body [:map [:message string?] [:status string?]]}}
                      :handler (fn [_request]
-                                (tap> _request)
                                 {:status 200
                                  :body {:message "Healthy!"
                                         :status "ok"}})}}]

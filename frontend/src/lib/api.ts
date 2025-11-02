@@ -17,6 +17,7 @@ export interface User {
   name: string
   firstName: string
   lastName: string
+  middleName?: string
   createdAt?: string
   updatedAt?: string
 }
@@ -32,6 +33,19 @@ export interface LoginResponse {
 }
 
 export interface AuthMeResponse {
+  user: User
+}
+
+export interface RegisterCredentials {
+  email: string
+  password: string
+  firstName: string
+  lastName: string
+  middleName?: string
+}
+
+export interface RegisterResponse {
+  message: string
   user: User
 }
 
@@ -100,6 +114,27 @@ async function apiRequest<T>(
  * Auth API endpoints
  */
 export const authApi = {
+  /**
+   * Register a new user account
+   */
+  register: async (
+    credentials: RegisterCredentials,
+  ): Promise<RegisterResponse> => {
+    // Convert camelCase to kebab-case for backend
+    const data = {
+      email: credentials.email,
+      password: credentials.password,
+      firstName: credentials.firstName,
+      lastName: credentials.lastName,
+      ...(credentials.middleName && { middleName: credentials.middleName }),
+    }
+
+    return apiRequest<RegisterResponse>('/api/users/register', {
+      method: 'POST',
+      data,
+    })
+  },
+
   /**
    * Login with email and password (cookie-based auth)
    */

@@ -3,8 +3,10 @@ import {
   useMutation,
   useQueryClient,
   queryOptions,
+  QueryClient,
 } from '@tanstack/react-query'
 import { authApi, type User, type LoginCredentials } from '@/lib/api'
+import { redirect } from '@tanstack/react-router'
 
 interface AuthContextType {
   user: User | null
@@ -90,5 +92,27 @@ export function useAuth(): AuthContextType {
     refetchUser,
     isLoginPending: loginMutation.isPending,
     isLogoutPending: logoutMutation.isPending,
+  }
+}
+
+// Route guards
+export const ensureAuthenticated = async (
+  queryClient: QueryClient,
+  redirectTo: string,
+) => {
+  const auth = await queryClient.ensureQueryData(
+    authenticatedUserQueryOptions(),
+  )
+  if (!auth?.id) {
+    throw redirect({ to: '/login', search: { redirect: redirectTo } })
+  }
+}
+
+export const ensureGuest = async (queryClient: QueryClient) => {
+  const auth = await queryClient.ensureQueryData(
+    authenticatedUserQueryOptions(),
+  )
+  if (auth?.id) {
+    throw redirect({ to: '/app' })
   }
 }

@@ -14,16 +14,22 @@ import {
   FieldLabel,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { useAuth } from '@/contexts/auth'
+import { authenticatedUserQueryOptions, useAuth } from '@/contexts/auth'
 import { ApiRequestError } from '@/lib/api'
 import { cn } from '@/lib/utils'
-import { createFileRoute, Navigate, useNavigate } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  Link,
+  Navigate,
+  redirect,
+  useNavigate,
+} from '@tanstack/react-router'
 import { fallback, zodValidator } from '@tanstack/zod-adapter'
 import { AlertCircleIcon } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { z } from 'zod'
 
-export const Route = createFileRoute('/login')({
+export const Route = createFileRoute('/(guest)/login')({
   component: LoginPage,
   validateSearch: zodValidator(
     z.object({
@@ -117,7 +123,14 @@ function LoginPage() {
                     {isLoginPending ? 'Logging in...' : 'Login'}
                   </Button>
                   <FieldDescription className="text-center">
-                    Don&apos;t have an account? <a href="#">Sign up</a>
+                    Don&apos;t have an account?{' '}
+                    <Link
+                      to="/signup"
+                      search={{ redirect: redirectTarget }}
+                      className="underline"
+                    >
+                      Sign up
+                    </Link>
                   </FieldDescription>
                 </Field>
               </FieldGroup>

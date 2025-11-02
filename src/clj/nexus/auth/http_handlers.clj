@@ -36,12 +36,14 @@
 ;; ============================================================================
 
 (defn- sanitize-user
-  "Remove sensitive fields and unqualify keys from user data"
+  "Remove sensitive fields and unqualify keys from user data
+   Converts resulting map to camelCase"
   [user]
   (-> user
       (dissoc :users/password_hash :password_hash)
       (dissoc :users/deleted_at)
-      (maps/unqualify-keys*)))
+      (maps/unqualify-keys*)
+      (maps/->camelCaseMap)))
 
 ;; ============================================================================
 ;; Web Auth Handlers (Cookie-based authentication)

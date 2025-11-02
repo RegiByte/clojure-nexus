@@ -75,10 +75,12 @@
           (is (= 201 (:status response)))
           (is (= "User registered successfully" (-> response :body :message)))
           (is (= "john.doe@example.com" (-> response :body :user :email)))
-          (is (= "John" (-> response :body :user :first-name)))
-          (is (= "Doe" (-> response :body :user :last-name)))
+          (is (= "John" (-> response :body :user :firstName)))
+          (is (= "Doe" (-> response :body :user :lastName)))
           (is (uuid? (-> response :body :user :id)))
           (is (nil? (-> response :body :user :password-hash))
+              "Password hash should not be in response")
+          (is (nil? (-> response :body :user :passwordHash))
               "Password hash should not be in response"))))))
 
 (deftest login-user-test
@@ -100,6 +102,12 @@
           (is (= "john.doe@example.com" (-> response :body :user :email)))
           (is (nil? (-> response :body :user :password-hash))
               "Password hash should not be in response"))))))
+
+(comment
+  (t/run-test register-user-test)
+
+  ;
+  )
 
 (deftest list-users-test
   (testing "Successfully list users with authentication"
@@ -171,7 +179,7 @@
               response (handlers/update-user-handler update-req)]
           (is (= 200 (:status response)))
           (is (= "User updated successfully" (-> response :body :message)))
-          (is (= "Johnny" (-> response :body :user :first-name))))))))
+          (is (= "Johnny" (-> response :body :user :firstName))))))))
 
 (deftest delete-user-test
   (testing "Successfully delete user with authentication"

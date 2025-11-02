@@ -1,15 +1,14 @@
 (ns nexus.router.web
   (:require
    [clojure.java.io :as io]
-   [jsonista.core :as jsonista]
    [nexus.auth.http-handlers :as auth-handlers]
-   [nexus.users.schemas :as user-schemas]))
+   [nexus.users.schemas.api :as api-schemas]))
 
 (defn auth-routes []
   ["/auth" {}
    [["/login" {:name :web-login
                :summary "Signs in a user through cookies"
-               :post {:parameters {:body user-schemas/LoginCredentials}
+               :post {:parameters {:body api-schemas/LoginCredentials}
                       :responses {200 {:body auth-handlers/WebAuthResponse}
                                   401 {:body auth-handlers/ErrorResponse}}
                       :handler auth-handlers/login-handler}}]
@@ -43,9 +42,9 @@
                serve-index-html}}]
 
 
-  ;;  ["/*path" {:conflicting true
-  ;;             :get {:handler ; Homepage route 
-  ;;                   serve-index-html}}]
+   ;;  ["/*path" {:conflicting true
+   ;;             :get {:handler ; Homepage route 
+   ;;                   serve-index-html}}]
 
    ;
    ]
