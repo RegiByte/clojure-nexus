@@ -1,4 +1,4 @@
-import { ensureGuest } from '@/contexts/auth'
+import { ensureGuest } from '@/lib/auth'
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/(guest)')({

@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import logo from '../logo.svg'
-import { authenticatedUserQueryOptions } from '@/contexts/auth'
+import { authenticatedUserQueryOptions } from '@/lib/auth'
 
 export const Route = createFileRoute('/')({
   beforeLoad: async ({ context }) => {

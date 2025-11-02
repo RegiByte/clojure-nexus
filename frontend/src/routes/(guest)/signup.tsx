@@ -14,7 +14,7 @@ import {
   FieldLabel,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { authenticatedUserQueryOptions, useAuth } from '@/contexts/auth'
+import { authenticatedUserQueryOptions, useAuth } from '@/lib/auth'
 import { authApi, ApiRequestError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import {

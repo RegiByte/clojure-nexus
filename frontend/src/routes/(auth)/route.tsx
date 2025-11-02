@@ -1,4 +1,4 @@
-import { ensureAuthenticated } from '@/contexts/auth'
+import { ensureAuthenticated } from '@/lib/auth'
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/(auth)')({
