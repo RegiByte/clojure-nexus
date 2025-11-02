@@ -106,10 +106,24 @@ main() {
     log_success "Git history removed"
     echo ""
 
-    # Replace in files
-    log_info "Replacing 'nexus' with '$PROJECT_NAMESPACE' in files..."
+    # Replace in files - SMART REPLACEMENT
+    log_info "Replacing 'nexus' with appropriate case in files..."
     
-    # Find all text files (excluding binary files, node_modules, target, data, uploads)
+    # First pass: Replace in SQL migrations and docker-compose (use snake_case for PostgreSQL)
+    log_info "  → Replacing in SQL migrations and docker-compose (snake_case)..."
+    find . -type f \( -name "*.sql" -o -name "docker-compose.yml" \) \
+        -print0 | while IFS= read -r -d '' file; do
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' "s/nexus/$PROJECT_SNAKE/g" "$file" 2>/dev/null || true
+            sed -i '' "s/Nexus/$PROJECT_CAPITALIZED/g" "$file" 2>/dev/null || true
+        else
+            sed -i "s/nexus/$PROJECT_SNAKE/g" "$file" 2>/dev/null || true
+            sed -i "s/Nexus/$PROJECT_CAPITALIZED/g" "$file" 2>/dev/null || true
+        fi
+    done
+    
+    # Second pass: Replace in all other files (use kebab-case for Clojure)
+    log_info "  → Replacing in Clojure files and configs (kebab-case)..."
     find . -type f \
         -not -path "*/node_modules/*" \
         -not -path "*/target/*" \
@@ -126,21 +140,20 @@ main() {
         -not -name "*.ttf" \
         -not -name "*.eot" \
         -not -name "pnpm-lock.yaml" \
+        -not -name "*.sql" \
+        -not -name "docker-compose.yml" \
         -print0 | while IFS= read -r -d '' file; do
         
-        # Use different sed syntax based on OS
         if [[ "$OSTYPE" == "darwin"* ]]; then
-            # macOS - Replace with kebab-case for namespaces
             sed -i '' "s/nexus/$PROJECT_NAMESPACE/g" "$file" 2>/dev/null || true
             sed -i '' "s/Nexus/$PROJECT_CAPITALIZED/g" "$file" 2>/dev/null || true
         else
-            # Linux
             sed -i "s/nexus/$PROJECT_NAMESPACE/g" "$file" 2>/dev/null || true
             sed -i "s/Nexus/$PROJECT_CAPITALIZED/g" "$file" 2>/dev/null || true
         fi
     done
     
-    log_success "File contents updated"
+    log_success "File contents updated (SQL: snake_case, Clojure: kebab-case)"
     echo ""
 
     # Rename directories (use snake_case)
