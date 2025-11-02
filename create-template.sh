@@ -44,8 +44,8 @@ validate_project_name() {
     fi
 }
 
-# Convert kebab-case to snake_case for namespaces
-to_namespace() {
+# Convert kebab-case to snake_case for file/directory names
+to_snake_case() {
     echo "$1" | tr '-' '_'
 }
 
@@ -71,11 +71,13 @@ main() {
     validate_project_name "$PROJECT_NAME"
 
     # Convert names
-    PROJECT_NAMESPACE=$(to_namespace "$PROJECT_NAME")
-    PROJECT_CAPITALIZED=$(capitalize "$PROJECT_NAMESPACE")
+    PROJECT_NAMESPACE="$PROJECT_NAME"  # Keep kebab-case for namespaces
+    PROJECT_SNAKE=$(to_snake_case "$PROJECT_NAME")  # snake_case for files/dirs
+    PROJECT_CAPITALIZED=$(capitalize "$PROJECT_SNAKE")
 
     log_info "Project name: $PROJECT_NAME"
-    log_info "Namespace: $PROJECT_NAMESPACE"
+    log_info "Namespace (kebab-case): $PROJECT_NAMESPACE"
+    log_info "File/Dir name (snake_case): $PROJECT_SNAKE"
     log_info "Capitalized: $PROJECT_CAPITALIZED"
     echo ""
 
@@ -128,7 +130,7 @@ main() {
         
         # Use different sed syntax based on OS
         if [[ "$OSTYPE" == "darwin"* ]]; then
-            # macOS
+            # macOS - Replace with kebab-case for namespaces
             sed -i '' "s/nexus/$PROJECT_NAMESPACE/g" "$file" 2>/dev/null || true
             sed -i '' "s/Nexus/$PROJECT_CAPITALIZED/g" "$file" 2>/dev/null || true
         else
@@ -141,23 +143,36 @@ main() {
     log_success "File contents updated"
     echo ""
 
-    # Rename directories
+    # Rename directories (use snake_case)
     log_info "Renaming directories..."
     
     if [ -d "src/clj/nexus" ]; then
-        mv "src/clj/nexus" "src/clj/$PROJECT_NAMESPACE"
-        log_success "Renamed src/clj/nexus → src/clj/$PROJECT_NAMESPACE"
+        mv "src/clj/nexus" "src/clj/$PROJECT_SNAKE"
+        log_success "Renamed src/clj/nexus → src/clj/$PROJECT_SNAKE"
     fi
     
     if [ -d "dev/nexus" ]; then
-        mv "dev/nexus" "dev/$PROJECT_NAMESPACE"
-        log_success "Renamed dev/nexus → dev/$PROJECT_NAMESPACE"
+        mv "dev/nexus" "dev/$PROJECT_SNAKE"
+        log_success "Renamed dev/nexus → dev/$PROJECT_SNAKE"
     fi
     
     if [ -d "test/clj/nexus" ]; then
-        mv "test/clj/nexus" "test/clj/$PROJECT_NAMESPACE"
-        log_success "Renamed test/clj/nexus → test/clj/$PROJECT_NAMESPACE"
+        mv "test/clj/nexus" "test/clj/$PROJECT_SNAKE"
+        log_success "Renamed test/clj/nexus → test/clj/$PROJECT_SNAKE"
     fi
+    
+    echo ""
+
+    # Rename migration files
+    log_info "Renaming migration files..."
+    
+    for migration in resources/migrations/*nexus*.sql; do
+        if [ -f "$migration" ]; then
+            new_name=$(echo "$migration" | sed "s/nexus/$PROJECT_NAMESPACE/g")
+            mv "$migration" "$new_name"
+            log_success "Renamed $(basename "$migration") → $(basename "$new_name")"
+        fi
+    done
     
     echo ""
 
@@ -167,7 +182,7 @@ main() {
     rm -rf uploads/* 2>/dev/null || true
     rm -rf target/* 2>/dev/null || true
     rm -rf node_modules 2>/dev/null || true
-    rm -f create-from-nexus-template.sh 2>/dev/null || true
+    rm -f create-template.sh 2>/dev/null || true
     log_success "Cleanup complete"
     echo ""
 
@@ -183,7 +198,7 @@ main() {
     log_info "Creating initial configuration..."
     if [ ! -f "resources/envs/dev.edn" ]; then
         cat > "resources/envs/dev.edn" << EOF
-{:db-url "postgres://postgres:postgres@localhost:5436/$PROJECT_NAMESPACE"
+{:db-url "postgres://postgres:postgres@localhost:5436/$PROJECT_SNAKE"
  :port 3456
  :jwt-secret "change-me-to-a-secure-secret-minimum-32-chars"}
 EOF
