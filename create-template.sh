@@ -162,7 +162,7 @@ main() {
     fi
 
     if [ -f "frontend/.env.example" ]; then
-        mv "frontend/.env.example" "frontend/.env.local"
+        cp "frontend/.env.example" "frontend/.env.local"
         log_success "Copied frontend/.env.example → frontend/.env.local"
     fi
     
