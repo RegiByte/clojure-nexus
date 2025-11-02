@@ -3,8 +3,7 @@
   (:require
    [nexus.auth.middleware :as auth-middleware]
    [nexus.shared.maps :as maps]
-   [nexus.users.service :as service]
-   [taoensso.telemere :as tel]))
+   [nexus.users.service :as service]))
 
 ;; ============================================================================
 ;; Note: Response schemas are now defined in nexus.users.schemas.api
@@ -18,7 +17,21 @@
 
 
 (defn- sanitize-user
-  "Remove sensitive fields and unqualify keys from user data"
+  "Remove sensitive fields and transform keys for API response.
+   
+   SECURITY: This function prevents password hash leakage!
+   - Removes :password_hash / :users/password_hash
+   - Even if service layer accidentally includes it, it won't reach client
+   
+   Transformations:
+   1. Remove sensitive fields (password_hash)
+   2. Unqualify keywords (:users/email → :email)
+   3. Convert to camelCase for frontend (email → email, first_name → firstName)
+   
+   Why this matters:
+   - Defense in depth: Multiple layers prevent password hash exposure
+   - API consistency: Frontend always receives camelCase
+   - Namespace cleanup: Qualified keywords are internal implementation detail"
   [user]
   (-> user
       (dissoc :users/password_hash :password_hash)

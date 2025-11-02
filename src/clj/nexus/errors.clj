@@ -1,4 +1,27 @@
-(ns nexus.errors)
+(ns nexus.errors
+  "Custom error types for consistent HTTP error responses.
+   
+   How this works:
+   1. Service layer throws errors using these functions
+   2. Exception middleware catches them by ::type
+   3. Middleware extracts :status and formats response
+   
+   Example flow:
+     Service: (throw (unauthorized \"Invalid token\" {:user-id 123}))
+     → Exception middleware catches ::unauthorized
+     → Returns: {:status 401, :body {:error \"Invalid token\", :data {...}}}
+   
+   Why ex-info?
+   - Clojure's standard exception with data
+   - Middleware can inspect ex-data for :type, :status, :details
+   - Preserves stack traces for debugging
+   
+   Error types map to HTTP status codes:
+   - ::validation  → 400 Bad Request
+   - ::unauthorized → 401 Unauthorized
+   - ::forbidden   → 403 Forbidden
+   - ::not-found   → 404 Not Found
+   - ::conflict    → 409 Conflict")
 
 (defn validation-error
   ([details] (validation-error "Validation failed" details))

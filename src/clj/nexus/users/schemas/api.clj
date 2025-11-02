@@ -1,6 +1,31 @@
 (ns nexus.users.schemas.api
   "API layer schemas - camelCase for HTTP requests/responses.
-   These schemas define the contract between the frontend and backend."
+   
+   Why separate API and domain schemas?
+   
+   1. Different naming conventions:
+      - API: camelCase (JavaScript/JSON standard)
+      - Domain: kebab-case (Clojure standard)
+   
+   2. Different validation rules:
+      - API: Strict validation, reject unknown fields
+      - Domain: May include internal fields (password-hash, etc.)
+   
+   3. API stability:
+      - API schemas define external contract (breaking changes affect clients)
+      - Domain schemas can change without affecting API
+   
+   4. Documentation:
+      - API schemas generate OpenAPI/Swagger docs
+      - Domain schemas are internal implementation
+   
+   Example:
+     API schema:    [:map [:firstName :string]]
+     Domain schema: [:map [:first-name :string]]
+     
+     HTTP handler transforms between them:
+       Request: {:firstName \"John\"} → {:first-name \"John\"}
+       Response: {:first-name \"John\"} → {:firstName \"John\"}"
   (:require
    [malli.util :as mu]
    [nexus.users.schemas.base :as base]))

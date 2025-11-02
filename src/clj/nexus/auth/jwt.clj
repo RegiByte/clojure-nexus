@@ -10,9 +10,30 @@
 ;; JWT Token Generation
 (defn generate-token
   "Generate a JWT token for a user.
+   
+   Token structure:
+   {:user-id \"uuid\"        ; From user data
+    :email \"user@email.com\" ; From user data
+    :iat 1234567890          ; Issued at (epoch seconds)
+    :exp 1234654290          ; Expires (epoch seconds)
+    ...custom-claims}        ; Additional claims (roles, permissions, etc.)
+   
    Options:
-   - :exp-hours - hours until expiration (default 24)
-   - :claims - additional claims to include"
+   - :exp-hours - Hours until expiration (default: 24)
+                  Note: Short-lived tokens are more secure but less convenient
+                  Consider implementing refresh tokens for production
+   - :claims - Additional claims to include (e.g., {:roles [\"admin\"]})
+   
+   Security considerations:
+   - Token is signed but NOT encrypted (don't include secrets)
+   - Anyone can decode and read the payload (use JWT debugger)
+   - Signature prevents tampering but not reading
+   - Keep tokens short-lived and use HTTPS in production
+   
+   Example:
+     (generate-token {:jwt-secret \"secret\"}
+                     {:id \"123\" :email \"user@test.com\"}
+                     {:exp-hours 1 :claims {:roles [\"user\"]}})"
   ([opts user-data] (generate-token opts user-data {}))
   ([{:keys [jwt-secret jwt-options]}
     user-data

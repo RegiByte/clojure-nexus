@@ -1,4 +1,26 @@
 (ns nexus.shared.maps
+  "Map key transformation utilities for API boundary conversions.
+   
+   Why we need this:
+   
+   1. Database layer: snake_case (SQL convention)
+      {:first_name \"John\", :created_at #inst \"...\"}
+   
+   2. Service layer: kebab-case (Clojure convention)
+      {:first-name \"John\", :created-at #inst \"...\"}
+   
+   3. API layer: camelCase (JavaScript/JSON convention)
+      {:firstName \"John\", :createdAt \"...\"}
+   
+   Transformation flow:
+   - Incoming request: camelCase → kebab-case (API → service)
+   - Database writes: kebab-case → snake_case (service → DB)
+   - Database reads: snake_case → kebab-case (automatic via jdbc options)
+   - Outgoing response: kebab-case → camelCase (service → API)
+   
+   Note: unqualify-keys* is used to remove namespace qualifiers
+   from qualified keywords (:users/email → :email) before sending
+   to frontend."
   (:require
    [camel-snake-kebab.core :as csk]
    [camel-snake-kebab.extras :as cske]
@@ -61,11 +83,11 @@
                 :this {:is-awesome :yes!,
                        :how {:many-levels
                              {:does-this {:goes :bro?}}}}})
-  
+
   (->camelCaseMap {:foo-bar "broo",
-                :this {:is_awesome :yes!,
-                       :how {:many-levels
-                             {:does-this {:goes_on :bro?}}}}})
+                   :this {:is_awesome :yes!,
+                          :how {:many-levels
+                                {:does-this {:goes_on :bro?}}}}})
 
 
   ;

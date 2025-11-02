@@ -128,9 +128,10 @@
    5. Request body parsing (JSON -> Clojure data)
    
    Why this order matters:
-   - Parse params first so they're available to other middleware
-   - Handle exceptions in the middle to catch errors from both sides
-   - Format response last so all responses are consistent"
+   - CORS must be outermost to handle OPTIONS preflight requests
+   - Exception handling in middle catches errors from both directions
+   - Authentication happens after parsing but before handlers
+   - Security headers applied last to all responses"
   [options]
   [;; debug
    ;;  [(fn [handler]
@@ -269,17 +270,32 @@
   "Creates the root handler with optional hot-reloading.
    
    Hot-reloading (dev mode):
-   - Routes are recompiled on every request
-   - You can change route handlers without restarting the server
-   - Uses var quotes (#') to get latest function definitions
+   - Uses var quote (#'routes) to get the LATEST function definition
+   - Router is recreated on EVERY request
+   - Changes to route handlers take effect immediately
+   - No server restart needed for most changes
    
-   Production mode:
-   - Routes compiled once at startup for performance
-   - No runtime overhead
+   How it works:
+     #'routes → Var reference (indirection)
+     routes   → Direct function reference (snapshot)
    
-   Parameters:
-   - options: {:hot-reload? bool, :show-error-stacks? bool, :cors-mode keyword}
-   - deps: Dependencies injected by Integrant (database, services, etc.)"
+   When you eval a new handler in REPL:
+     - With #'routes: Next request uses new handler ✓
+     - Without #': Old handler still used ✗
+   
+   Performance:
+   - Dev: Slight overhead per request (acceptable for development)
+   - Prod: Router compiled once at startup (maximum performance)
+   
+   What hot-reloads:
+   - Route handlers (defn changes)
+   - Middleware (if using var quotes)
+   - Route definitions (if in routes function)
+   
+   What requires restart:
+   - Schema changes (Malli compilation)
+   - Integrant component changes
+   - Dependency updates"
   [{:keys [hot-reload? show-error-stacks? cors-mode]} deps]
   (let [handler-params {:deps deps
                         :cors-mode cors-mode

@@ -40,13 +40,5 @@
    ["/" {:name :homepage
          :get {:handler ; Homepage route 
                serve-index-html}}]
-
-
-   ;;  ["/*path" {:conflicting true
-   ;;             :get {:handler ; Homepage route 
-   ;;                   serve-index-html}}]
-
    ;
-   ]
-  ; End Web Routes
-  )
+   ])
