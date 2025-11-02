@@ -464,11 +464,10 @@ nexus/
 │   │   │   └── (auth)/         # Protected routes
 │   │   │       └── app/
 │   │   │           └── index.tsx
-│   │   ├── contexts/
-│   │   │   └── auth.tsx        # Auth context (TanStack Query)
 │   │   ├── lib/
 │   │   │   ├── api.ts          # Backend API client
 │   │   │   └── utils.ts        # Utility functions
+│   │   │   └── auth.ts         # Auth hooks (TanStack Query)
 │   │   └── components/         # React components
 │   │       ├── Header.tsx
 │   │       └── ui/             # Shadcn/ui components
