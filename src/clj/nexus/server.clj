@@ -198,8 +198,6 @@
 
 
 (defn serve-index-html [_request]
-  (tap> "serving index page")
-  (tap> _request)
   {:status 200
    :headers {"Content-Type" "text/html"}
    :body (slurp (io/resource "public/index.html"))})
