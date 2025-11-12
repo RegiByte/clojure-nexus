@@ -92,7 +92,9 @@
   [search-term]
   {:select [:*]
    :from [:nexus.users]
-   :where [:or
-           [:ilike :first_name (str "%" search-term "%")]
-           [:ilike :last_name (str "%" search-term "%")]
-           [:ilike :email (str "%" search-term "%")]]})
+   :where [:and
+           (not-deleted)
+           [:or
+            [:ilike :first_name (str "%" search-term "%")]
+            [:ilike :last_name (str "%" search-term "%")]
+            [:ilike :email (str "%" search-term "%")]]]})

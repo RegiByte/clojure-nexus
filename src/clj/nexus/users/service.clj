@@ -97,7 +97,7 @@
                    :data {:user-id user-id}})
         (db/exec-one! db query))
       (throw (errors/unauthorized "Invalid password" {:user-id user-id})))
-    (throw (errors/unauthorized "User not found" {:user-id user-id}))))
+    (throw (errors/not-found "user" user-id))))
 
 
 

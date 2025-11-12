@@ -14,15 +14,14 @@ import {
   FieldLabel,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { authenticatedUserQueryOptions, useAuth } from '@/lib/auth'
-import { authApi, ApiRequestError } from '@/lib/api'
+import { ApiRequestError, authApi } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/utils'
 import {
   createFileRoute,
   Link,
   Navigate,
-  redirect,
-  useNavigate,
+  useNavigate
 } from '@tanstack/react-router'
 import { fallback, zodValidator } from '@tanstack/zod-adapter'
 import { AlertCircleIcon } from 'lucide-react'

@@ -23,7 +23,9 @@ function AppLayout() {
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-700">
-                Welcome, {user?.name || user?.email}
+                Welcome,
+                {user?.lastName && ` ${user.lastName}`}
+                {user?.middleName && ` ${user.middleName}`}
               </span>
               <button
                 onClick={handleLogout}
