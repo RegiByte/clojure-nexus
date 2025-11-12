@@ -193,8 +193,8 @@
                      (map #(str/split % #"\|")) ; line->row(columns)
                      (map (fn [[id image name ports created-at]]
                             {:id id
-                             :image image
                              :name name
+                             :image image
                              :ports ports
                              :created-at created-at}))) ; row(columns)->map
         parsed (transduce parse-lines

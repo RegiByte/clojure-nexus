@@ -92,18 +92,14 @@
                    data (assoc :data data)
                    details (assoc :details details))}))))
 
-(defn not-found-handler
+(defn api-not-found-handler
   "Handles 404 Not Found responses.
    
    Called when no route matches the request path."
-  [request]
-  (if (str/starts-with? (:uri request) "/api")
-    {:status 404
-     :headers {"Content-Type" "application/json"}
-     :body (jsonista/write-value-as-string {:error "Not Found"})}
-    {:status 200
-     :headers {"Content-Type" "text/html"}
-     :body (slurp (io/resource "public/index.html"))}))
+  [_request]
+  {:status 404
+   :headers {"Content-Type" "application/json"}
+   :body (jsonista/write-value-as-string {:error "API endpoint not found"})})
 
 (defn wrap-context-deps
   "Add app dependencies of handler to request as a context key."
@@ -200,6 +196,13 @@
 ;; Router & Handler Creation
 ;; ==========================
 
+
+(defn serve-index-html [_request]
+  {:status 200
+   :headers {"Content-Type" "text/html"}
+   :body (slurp (io/resource "public/index.html"))})
+
+
 (defn create-handler
   "Creates the main Ring handler with routing and middleware.
    
@@ -218,43 +221,51 @@
   [{:keys [routes deps cors-mode show-error-stacks?]}]
   (let
    [cors-cfg (cors-config cors-mode)
-    ;; Create the router with data-driven middleware
-    router (ring/router
-            routes
-            {:conflicts (constantly nil)
-             :exception pretty/exception
-             :data {:muuntaja muuntaja-core/instance
-                    :coercion (reitit.coercion.malli/create
-                               {;; set of keys to include in error messages
-                                :error-keys #{#_:type
-                                              :in
-                                              :value
-                                              :errors
-                                              :humanized
-                                              #_:transformed}
-                                ;; schema identity function (default: close all map schemas)
-                                :compile mu/closed-schema
-                                ;; strip-extra-keys (affects only predefined transformers)
-                                :strip-extra-keys false
-                                ;; add/set default values
-                                :default-values true
-                                ;; malli options
-                                :options nil})
-                    :middleware (global-middlewares {:show-error-stacks? show-error-stacks?
-                                                     :deps deps})}})
+    ;; Create the api router with data-driven middleware
+    api-router (ring/router
+                routes
+                {:exception pretty/exception
+                 :data {:muuntaja muuntaja-core/instance
+                        :coercion (reitit.coercion.malli/create
+                                   {;; set of keys to include in error messages
+                                    :error-keys #{#_:type
+                                                  :in
+                                                  :value
+                                                  :errors
+                                                  :humanized
+                                                  #_:transformed}
+                                    ;; schema identity function (default: close all map schemas)
+                                    :compile mu/closed-schema
+                                    ;; strip-extra-keys (affects only predefined transformers)
+                                    :strip-extra-keys false
+                                    ;; add/set default values
+                                    :default-values true
+                                    ;; malli options
+                                    :options nil})
+                        :middleware (global-middlewares {:show-error-stacks? show-error-stacks?
+                                                         :deps deps})}})
+
+    ;; Create the frontend SPA router
+    frontend-router (ring/router [""
+                                  ["/api/*" {:handler #'api-not-found-handler}]
+                                  ["/*" {:get #'serve-index-html}]]
+                                 {:conflicts nil})
+
     ;; Create the ring handler with fallbacks
     handler (ring/ring-handler
-             router
+             api-router
              (ring/routes
               (ring/redirect-trailing-slash-handler)  ; /path/ -> /path
               (ring/create-resource-handler {:root "public"
-                                             :path "/"}) ; Serve files from resources/public at /
+                                             :path "/"}) ; Serve files from resources/public at / 
               (swagger-ui/create-swagger-ui-handler {:path "/api/docs"
                                                      :config {:validatorUrl nil
                                                               :urls [{:name "Main API" :url "/api/openapi.json"}]
                                                               :urls.primaryName "Main API"
                                                               :operationSorter "alpha"}})
-              (ring/create-default-handler {:not-found #'not-found-handler})))
+              (ring/ring-handler
+               frontend-router)
+              (ring/create-default-handler {:not-found #'api-not-found-handler})))
 
     ;; CORS must wrap the entire ring handler, instead of being a reitit middleware
     ;; This is because CORS needs to handle OPTIONS preflight requests before routing
@@ -263,7 +274,7 @@
                                     :access-control-allow-methods [:get :post :put :delete :patch :options]
                                     :access-control-allow-credentials (str (:allow-credentials cors-cfg))
                                     :access-control-allow-headers ["Content-Type" "Authorization"])]
-    {:router router
+    {:router api-router
      :handler wrapped-handler}))
 
 (defn create-root-handler

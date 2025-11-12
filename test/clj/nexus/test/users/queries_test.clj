@@ -87,6 +87,18 @@
       (is (= [:nexus.users] (:from result)))
       (is (= [:*] (:select result)))
       (is (vector? (:where result)))
-      (is (= :or (first (:where result))))
-      (is (= 4 (count (:where result)))) ; :or + 3 conditions
-      (is (some #(and (vector? %) (= :ilike (first %))) (rest (:where result)))))))
+      (is (= :and (first (:where result))))
+      (is (= 3 (count (:where result)))) ; :and + 2 conditions
+      (is (= [:= nil :deleted_at] (second (:where result))))
+      (is (= [:or
+              [:ilike :first_name (str "%" "john" "%")]
+              [:ilike :last_name (str "%" "john" "%")]
+              [:ilike :email (str "%" "john" "%")]]
+             (nth (:where result) 2))))))
+
+
+(comment
+  (t/run-tests)
+  (t/run-test search-users-query-test)
+  ;
+  )

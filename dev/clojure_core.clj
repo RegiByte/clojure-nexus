@@ -61,8 +61,15 @@
               {:c 3}
               {:a 5 :d {:y 2}})
 
+  (get-in {:items [{:a 1 :b [:x :y]}
+                   {:b 2}
+                   {:c 3}]}
+          [:items 0 :b 2]
+          :default)
+
   ; Sum
   (+ 1 2 3 4)
+  (apply + [1 2 3])
   (apply + [1 2 3])
   ; First 
   (first [1 2 3])
@@ -194,12 +201,12 @@
   ((juxt #(->> (:a %)
                (apply max))
          #(->> (:a %)
-               (apply min)) 
+               (apply min))
          #(->> (:b %)
                (apply max))
          #(->> (:b %)
                (apply min))) {:a [1 2 3]
-                                 :b [4 5 6]})
+                              :b [4 5 6]})
 
 
 

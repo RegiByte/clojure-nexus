@@ -121,7 +121,7 @@
    6. Drops the test database
    
    Usage:
-   (with-system
+   (with-system+server
      (fn [system]
        (let [db (-> system :nexus.db/connection)
              jwt-service (-> system :nexus.auth/jwt)]
