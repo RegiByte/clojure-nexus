@@ -57,7 +57,8 @@
   :main ^:skip-aot nexus.core
   :target-path "target/%s"
 
-  :aliases {"uberjar-full" ["do" ["uberjar"]]}
+  :aliases {"uberjar-full" ["do" ["uberjar"]]
+            "kaocha" ["run" "-m" "kaocha.runner"]}
 
   :profiles {:uberjar {:aot :all
                        :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}
@@ -68,5 +69,6 @@
                                   [binaryage/devtools "1.0.7"]
                                   ;; Testing
                                   [org.testcontainers/testcontainers "1.20.3"]
-                                  [org.testcontainers/postgresql "1.20.3"]]
+                                  [org.testcontainers/postgresql "1.20.3"]
+                                  [lambdaisland/kaocha "1.91.1392"]]
                    :repl-options {:init-ns nexus.user}}})

@@ -59,12 +59,19 @@
   (println (type server))
   (.port server))
 
-(defn server->host
+(defn server->http-host
   "Extracts the actual port from a running Jetty server instance.
-   Useful when the server is started on port 0 (random port)."
+   Returns an HTTP host url."
   [server]
   (let [port (server->port server)]
     (str "http://localhost:" port)))
+
+(defn server->ws-host
+  "Extracts the actual port from a running Jetty server instance.
+   Returns a WebSocket host url."
+  [server]
+  (let [port (server->port server)]
+    (str "ws://localhost:" port)))
 
 (defn http-request
   "Makes an HTTP request using clj-http.

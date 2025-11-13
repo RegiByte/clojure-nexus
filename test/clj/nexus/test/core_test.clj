@@ -43,7 +43,7 @@
       (fn [system]
         (let [server (-> system :nexus.server/server)
               port (h/server->port server)
-              host (h/server->host server)
+              host (h/server->http-host server)
               url (str host "/api/health")
               response (h/http-request :get url)]
 
@@ -66,7 +66,7 @@
         (fn [system1]
           (let [server1 (-> system1 :nexus.server/server)
                 port1 (h/server->port server1)
-                server1-host (h/server->host server1)]
+                server1-host (h/server->http-host server1)]
             (swap! ports conj port1)
             (println "Server 1 running on port:" port1)
 
@@ -75,7 +75,7 @@
               (fn [system2]
                 (let [server2 (-> system2 :nexus.server/server)
                       port2 (h/server->port server2)
-                      server2-host (h/server->host server2)]
+                      server2-host (h/server->http-host server2)]
                   (swap! ports conj port2)
                   (println "Server 2 running on port:" port2)
 

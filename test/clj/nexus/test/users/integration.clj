@@ -34,7 +34,7 @@
     (test-system/with-system+server
       (fn [system]
         (let [server (:nexus.server/server system)
-              path (str (th/server->host server) "/api/users/register")
+              path (str (th/server->http-host server) "/api/users/register")
               response (th/http-request :post
                                         path
                                         {:body test-user-data})]
@@ -62,12 +62,12 @@
       (fn [system]
         ;; First register a user
         (let [server (:nexus.server/server system)
-              path (str (th/server->host server) "/api/users/register")
+              path (str (th/server->http-host server) "/api/users/register")
               register-response (th/http-request :post
                                                  path
                                                  {:body test-user-data})
 
-              path (str (th/server->host server) "/api/users/login")
+              path (str (th/server->http-host server) "/api/users/login")
               login-response (th/http-request :post path
                                               {:body {:email (:email test-user-data)
                                                       :password (:password test-user-data)}})]
@@ -89,7 +89,7 @@
     (test-system/with-system+server
       (fn [system]
         (let [server (:nexus.server/server system)
-              base-url (th/server->host server)
+              base-url (th/server->http-host server)
 
               ;; Register first user
               _ (th/http-request :post
@@ -128,7 +128,7 @@
     (test-system/with-system+server
       (fn [system]
         (let [server (:nexus.server/server system)
-              base-url (th/server->host server)
+              base-url (th/server->http-host server)
 
               ;; Register user
               register-response (th/http-request :post
@@ -165,7 +165,7 @@
     (test-system/with-system+server
       (fn [system]
         (let [server (:nexus.server/server system)
-              base-url (th/server->host server)
+              base-url (th/server->http-host server)
 
               ;; Register user
               register-response (th/http-request :post
@@ -197,7 +197,7 @@
     (test-system/with-system+server
       (fn [system]
         (let [server (:nexus.server/server system)
-              base-url (th/server->host server)
+              base-url (th/server->http-host server)
 
               ;; Register user
               register-response (th/http-request :post
@@ -245,7 +245,7 @@
     (test-system/with-system+server
       (fn [system]
         (let [server (:nexus.server/server system)
-              base-url (th/server->host server)
+              base-url (th/server->http-host server)
 
               ;; Register user
               register-response (th/http-request :post
@@ -278,7 +278,7 @@
     (test-system/with-system+server
       (fn [system]
         (let [server (:nexus.server/server system)
-              base-url (th/server->host server)
+              base-url (th/server->http-host server)
 
               ;; Register user
               register-response (th/http-request :post
@@ -323,7 +323,7 @@
     (test-system/with-system+server
       (fn [system]
         (let [server (:nexus.server/server system)
-              base-url (th/server->host server)
+              base-url (th/server->http-host server)
 
               ;; Register first user
               _ (th/http-request :post
@@ -359,7 +359,7 @@
     (test-system/with-system+server
       (fn [system]
         (let [server (-> system :nexus.server/server)
-              base-url (str (th/server->host server) "/api/users")
+              base-url (str (th/server->http-host server) "/api/users")
 
               ;; Try to list users without token
               response (http/get
