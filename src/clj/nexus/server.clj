@@ -12,6 +12,8 @@
    [reitit.coercion.malli :as malli-coercion]
    [reitit.dev.pretty :as pretty]
    [reitit.openapi :as openapi]
+   [aleph.http :as http]
+   [manifold.deferred :as d]
    [reitit.ring :as ring]
    [reitit.ring.coercion :as coercion]
    [reitit.ring.middleware.exception :as exception]
@@ -335,17 +337,29 @@
    
    This is called by Integrant when starting :nexus.server/server.
    It starts the actual HTTP server listening on the configured port.
-   
+
+   Aleph advantages:
+   - Built on Netty for high performance
+   - Native async/await support via Manifold
+   - WebSocket support out of the box
+   - Server-Sent Events (SSE) support
+   - HTTP/2 support   
+
    Parameters from config:
    - :port - Which port to listen on
    - :join? false - Don't block the thread (allows REPL interaction)
    - :max-idle-time - Close idle connections after 30 seconds"
   (tel/log! {:data {:options options}
              :level :info} "initializing server")
-  (jetty/run-jetty (-> deps :app :handler) {:join? false
-                                            :max-idle-time 30000
-                                            :host "0.0.0.0"
-                                            :port (:port options)}))
+  (http/start-server (-> deps :app :handler)
+                     {
+                      ;; :join? false
+                      ;; :max-idle-time 30000
+                      :host "0.0.0.0"
+                      :port (:port options)
+                      ;; Aleph-specific settings
+
+                      }))
 
 (defmethod ig/halt-key! ::server [_ server]
   "Stops the Jetty web server component.
@@ -353,4 +367,4 @@
    This is called by Integrant when stopping :nexus.server/server.
    Ensures graceful shutdown of the HTTP server."
   (tel/log! :info "stopping server")
-  (.stop server))
+  (.close server))

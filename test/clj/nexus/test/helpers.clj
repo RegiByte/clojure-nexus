@@ -52,13 +52,11 @@
 
 
 (defn server->port
-  "Extracts the actual port from a running Jetty server instance.
+  "Extracts the actual port from a running Netty server instance.
    Useful when the server is started on port 0 (random port)."
   [server]
-  (-> server
-      (.getConnectors)
-      (first)
-      (.getLocalPort)))
+  (println (type server))
+  (.port server))
 
 (defn server->host
   "Extracts the actual port from a running Jetty server instance.

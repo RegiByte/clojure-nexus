@@ -359,8 +359,7 @@
     (test-system/with-system+server
       (fn [system]
         (let [server (-> system :nexus.server/server)
-              port (-> server .getURI .getPort)
-              base-url (str "http://localhost:" port "/api/users")
+              base-url (str (th/server->host server) "/api/users")
 
               ;; Try to list users without token
               response (http/get

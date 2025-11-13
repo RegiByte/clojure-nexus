@@ -47,6 +47,12 @@
                  [metosin/ring-http-response "0.9.5"]
                  [ring/ring-core "1.15.3"]
                  [ring/ring-headers "0.4.0"]
+
+                 ;; Async facilities
+                 [manifold "0.4.4"]
+
+                 ;; Web server
+                 [aleph "0.9.3"]
                  [ring/ring-jetty-adapter "1.15.3"]]
   :main ^:skip-aot nexus.core
   :target-path "target/%s"
