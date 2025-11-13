@@ -2,6 +2,7 @@
   (:require
    [clojure.java.io :as io]
    [nexus.auth.middleware :as auth-middleware]
+   [nexus.router.realtime :as realtime]
    [nexus.users.http-handlers :as user-handlers]
    [nexus.users.schemas.api :as api-schemas]
    [reitit.openapi :as openapi]
@@ -227,6 +228,8 @@
                        :handler (openapi/create-openapi-handler)}}]
 
    ["/examples", (example-routes)]
+
+   ["/realtime", (realtime/routes)]
 
    (auth-routes)
 
