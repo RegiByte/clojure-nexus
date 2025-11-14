@@ -1,10 +1,12 @@
 (ns nexus.user
   (:require
-   [nexus.dev-system :as ds :refer [connection server:handler server:router services:jwt
-                                    test-config system restart start stop]]
    [integrant.repl :as ig-repl]
    [next.jdbc :as jdbc]
+   [nexus.dev-system :as ds :refer [connection restart server:handler
+                                    server:router services:jwt services:stream
+                                    start stop system test-config]]
    [nexus.router.helpers :as rh]
+   [nexus.router.realtime.service :as stream-svc]
    [nexus.system :as system]
    [nexus.users.service :as users]
    [reitit.core :as reitit]
@@ -50,7 +52,7 @@
     :middle-name "Adriano"
     :email "regi+test1@nexus.com"
     :password "somenicepassword"})
-  
+
   (println {:first-name "Reginaldo"
             :last-name "Junior"
             :middle-name "Adriano"
@@ -83,9 +85,9 @@
   (users/delete-user!
    (user-deps)
    #uuid "4437d63a-c70e-4d8f-8ebc-515c4e71457b")
-  
+
   (java.util.UUID/fromString "03a8ade1-615c-4dd3-a535-71f5742a063d")
-  
+
   (users/find-by-id
    (user-deps)
    #uuid "03a8ade1-615c-4dd3-a535-71f5742a063d")
@@ -188,4 +190,26 @@
 
 
 ;
+  )
+
+(comment
+  ;; Testing Stream Service
+
+  ;; Check active streams
+  (stream-svc/get-active-streams (services:stream))
+  (stream-svc/get-active-streams-by-channel (services:stream) :broadcast-channel)
+  (stream-svc/get-active-streams-by-type (services:stream) :sse)
+  (stream-svc/get-active-streams-by-type (services:stream) :websocket)
+  (stream-svc/stream-count (services:stream))
+
+  ;; Close a specific stream (get ID from browser console or logs)
+  (stream-svc/close-stream! (services:stream) "517f76b0-6d09-405f-87a3-f35e189dc0db")
+
+  ;; Close all streams (useful for testing shutdown behavior)
+  (stream-svc/close-all-streams! (services:stream))
+
+  ;; After closing streams, check the browser - connections should immediately close!
+  ;; No more 15-second timeout!
+
+  ;
   )

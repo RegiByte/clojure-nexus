@@ -3,7 +3,8 @@
    [clojure.edn :as edn]
    [jsonista.core :as json]
    [clj-http.client :as http]
-   [clojure.java.io :as io]))
+   [clojure.java.io :as io]
+   [nexus.test.test-system :as test-system]))
 
 
 (defn decode-body
@@ -52,20 +53,25 @@
 
 
 (defn server->port
-  "Extracts the actual port from a running Jetty server instance.
+  "Extracts the actual port from a running Netty server instance.
    Useful when the server is started on port 0 (random port)."
   [server]
-  (-> server
-      (.getConnectors)
-      (first)
-      (.getLocalPort)))
+  (println (type server))
+  (.port server))
 
-(defn server->host
+(defn server->http-host
   "Extracts the actual port from a running Jetty server instance.
-   Useful when the server is started on port 0 (random port)."
+   Returns an HTTP host url."
   [server]
   (let [port (server->port server)]
     (str "http://localhost:" port)))
+
+(defn server->ws-host
+  "Extracts the actual port from a running Jetty server instance.
+   Returns a WebSocket host url."
+  [server]
+  (let [port (server->port server)]
+    (str "ws://localhost:" port)))
 
 (defn http-request
   "Makes an HTTP request using clj-http.

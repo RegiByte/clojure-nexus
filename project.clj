@@ -47,11 +47,18 @@
                  [metosin/ring-http-response "0.9.5"]
                  [ring/ring-core "1.15.3"]
                  [ring/ring-headers "0.4.0"]
+
+                 ;; Async facilities
+                 [manifold "0.4.4"]
+
+                 ;; Web server
+                 [aleph "0.9.3"]
                  [ring/ring-jetty-adapter "1.15.3"]]
   :main ^:skip-aot nexus.core
   :target-path "target/%s"
 
-  :aliases {"uberjar-full" ["do" ["uberjar"]]}
+  :aliases {"uberjar-full" ["do" ["uberjar"]]
+            "kaocha" ["run" "-m" "kaocha.runner"]}
 
   :profiles {:uberjar {:aot :all
                        :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}
@@ -62,5 +69,6 @@
                                   [binaryage/devtools "1.0.7"]
                                   ;; Testing
                                   [org.testcontainers/testcontainers "1.20.3"]
-                                  [org.testcontainers/postgresql "1.20.3"]]
+                                  [org.testcontainers/postgresql "1.20.3"]
+                                  [lambdaisland/kaocha "1.91.1392"]]
                    :repl-options {:init-ns nexus.user}}})

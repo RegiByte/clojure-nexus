@@ -1,5 +1,8 @@
 (ns nexus.server
   (:require
+   [aleph.http :as http]
+   [aleph.netty :as netty]
+   [clojure.java.io :as io]
    [clojure.stacktrace :as stacktrace]
    [clojure.string :as str]
    [integrant.core :as ig]
@@ -9,6 +12,7 @@
    [nexus.auth.middleware :as auth-middleware]
    [nexus.errors :as errors]
    [nexus.router.core :refer [routes]]
+   [nexus.router.realtime.service :as stream-svc]
    [reitit.coercion.malli :as malli-coercion]
    [reitit.dev.pretty :as pretty]
    [reitit.openapi :as openapi]
@@ -19,14 +23,12 @@
    [reitit.ring.middleware.muuntaja :as muuntaja]
    [reitit.ring.middleware.parameters :as parameters]
    [reitit.swagger-ui :as swagger-ui]
-   [ring.adapter.jetty :as jetty]
    [ring.middleware.content-type :as content-type]
    [ring.middleware.cookies :as ring-cookies]
    [ring.middleware.cors :as cors]
    [ring.middleware.default-charset :as default-charset]
    [ring.middleware.x-headers :as x-headers]
-   [taoensso.telemere :as tel]
-   [clojure.java.io :as io]))
+   [taoensso.telemere :as tel]))
 
 
 ;; Error Handling
@@ -331,26 +333,40 @@
   (create-root-handler options deps))
 
 (defmethod ig/init-key ::server [_ {:keys [options deps]}]
-  "Initializes the Jetty web server component.
+  "Initializes the Aleph web server component.
    
    This is called by Integrant when starting :nexus.server/server.
    It starts the actual HTTP server listening on the configured port.
-   
+
+   Aleph advantages:
+   - Built on Netty for high performance
+   - Native async/await support via Manifold
+   - WebSocket support out of the box
+   - Server-Sent Events (SSE) support
+   - HTTP/2 support   
+
    Parameters from config:
    - :port - Which port to listen on
-   - :join? false - Don't block the thread (allows REPL interaction)
-   - :max-idle-time - Close idle connections after 30 seconds"
-  (tel/log! {:data {:options options}
-             :level :info} "initializing server")
-  (jetty/run-jetty (-> deps :app :handler) {:join? false
-                                            :max-idle-time 30000
-                                            :host "0.0.0.0"
-                                            :port (:port options)}))
+   - :shutdown-timeout - Graceful shutdown timeframe in seconds"
+  (tel/log! :info "initializing server")
+  (http/start-server (-> deps :app :handler)
+                     {:host "0.0.0.0"
+                      :port (:port options)
+                      ;; Aleph-specific settings
+                      :shutdown-timeout (or (:shutdown-timeout options)
+                                            15)}))
 
 (defmethod ig/halt-key! ::server [_ server]
-  "Stops the Jetty web server component.
+  "Stops the Aleph web server component.
    
    This is called by Integrant when stopping :nexus.server/server.
    Ensures graceful shutdown of the HTTP server."
   (tel/log! :info "stopping server")
-  (.stop server))
+  (.close server)
+  (netty/wait-for-close server))
+
+(comment
+  (or 0
+      1)
+  ;
+  )

@@ -16,6 +16,8 @@ import { Route as guestSignupRouteImport } from './routes/(guest)/signup'
 import { Route as guestLoginRouteImport } from './routes/(guest)/login'
 import { Route as authAppRouteRouteImport } from './routes/(auth)/app/route'
 import { Route as authAppIndexRouteImport } from './routes/(auth)/app/index'
+import { Route as authAppWebsocketRouteImport } from './routes/(auth)/app/websocket'
+import { Route as authAppSseRouteImport } from './routes/(auth)/app/sse'
 
 const guestRouteRoute = guestRouteRouteImport.update({
   id: '/(guest)',
@@ -50,18 +52,32 @@ const authAppIndexRoute = authAppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => authAppRouteRoute,
 } as any)
+const authAppWebsocketRoute = authAppWebsocketRouteImport.update({
+  id: '/websocket',
+  path: '/websocket',
+  getParentRoute: () => authAppRouteRoute,
+} as any)
+const authAppSseRoute = authAppSseRouteImport.update({
+  id: '/sse',
+  path: '/sse',
+  getParentRoute: () => authAppRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof authAppRouteRouteWithChildren
   '/login': typeof guestLoginRoute
   '/signup': typeof guestSignupRoute
+  '/app/sse': typeof authAppSseRoute
+  '/app/websocket': typeof authAppWebsocketRoute
   '/app/': typeof authAppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof guestLoginRoute
   '/signup': typeof guestSignupRoute
+  '/app/sse': typeof authAppSseRoute
+  '/app/websocket': typeof authAppWebsocketRoute
   '/app': typeof authAppIndexRoute
 }
 export interface FileRoutesById {
@@ -72,13 +88,22 @@ export interface FileRoutesById {
   '/(auth)/app': typeof authAppRouteRouteWithChildren
   '/(guest)/login': typeof guestLoginRoute
   '/(guest)/signup': typeof guestSignupRoute
+  '/(auth)/app/sse': typeof authAppSseRoute
+  '/(auth)/app/websocket': typeof authAppWebsocketRoute
   '/(auth)/app/': typeof authAppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/login' | '/signup' | '/app/'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/login'
+    | '/signup'
+    | '/app/sse'
+    | '/app/websocket'
+    | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/signup' | '/app'
+  to: '/' | '/login' | '/signup' | '/app/sse' | '/app/websocket' | '/app'
   id:
     | '__root__'
     | '/'
@@ -87,6 +112,8 @@ export interface FileRouteTypes {
     | '/(auth)/app'
     | '/(guest)/login'
     | '/(guest)/signup'
+    | '/(auth)/app/sse'
+    | '/(auth)/app/websocket'
     | '/(auth)/app/'
   fileRoutesById: FileRoutesById
 }
@@ -147,14 +174,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authAppIndexRouteImport
       parentRoute: typeof authAppRouteRoute
     }
+    '/(auth)/app/websocket': {
+      id: '/(auth)/app/websocket'
+      path: '/websocket'
+      fullPath: '/app/websocket'
+      preLoaderRoute: typeof authAppWebsocketRouteImport
+      parentRoute: typeof authAppRouteRoute
+    }
+    '/(auth)/app/sse': {
+      id: '/(auth)/app/sse'
+      path: '/sse'
+      fullPath: '/app/sse'
+      preLoaderRoute: typeof authAppSseRouteImport
+      parentRoute: typeof authAppRouteRoute
+    }
   }
 }
 
 interface authAppRouteRouteChildren {
+  authAppSseRoute: typeof authAppSseRoute
+  authAppWebsocketRoute: typeof authAppWebsocketRoute
   authAppIndexRoute: typeof authAppIndexRoute
 }
 
 const authAppRouteRouteChildren: authAppRouteRouteChildren = {
+  authAppSseRoute: authAppSseRoute,
+  authAppWebsocketRoute: authAppWebsocketRoute,
   authAppIndexRoute: authAppIndexRoute,
 }
 

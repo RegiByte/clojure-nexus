@@ -137,7 +137,8 @@
             config+server (merge config {:nexus.server/server
                                          {:options
                                           {; Started on random port per test
-                                           :port 0}
+                                           :port 0
+                                           :shutdown-timeout 0}
                                           :deps {:app (ig/ref :nexus.server/app)}}})
             system (ig/init config+server)]
         (try
