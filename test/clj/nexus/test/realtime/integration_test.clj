@@ -278,13 +278,6 @@
                 (println "closing body!!")
                 (.close body)))))))))
 
-(comment
-  (t/run-test sse-counter-test)
-  (t/run-tests)
-
-  ;
-  )
-
 (deftest sse-multi-event-test
   (testing "SSE multi-event endpoint sends different event types"
     (test-sys/with-system+server
@@ -333,66 +326,76 @@
             (finally
               (.close reader))))))))
 
-;; (deftest sse-connection-cleanup-test
-;;   (testing "SSE connection cleans up properly when closed"
-;;     (test-sys/with-system+server
-;;       (fn [system]
-;;         (let [server (:nexus.server/server system)
-;;               host (th/server->http-host server)
-;;               response @(http/get (str host "/api/realtime/sse/events")
-;;                                   {:as :stream})
-;;               body (:body response)
-;;               reader (BufferedReader. (InputStreamReader. body))]
+(deftest sse-connection-cleanup-test
+  (testing "SSE connection cleans up properly when closed"
+    (test-sys/with-system+server
+      (fn [system]
+        (let [server (:nexus.server/server system)
+              host (th/server->http-host server)
+              response @(http/get (str host "/api/realtime/sse/events")
+                                  {:as :stream})
+              body (:body response)
+              reader (BufferedReader. (InputStreamReader. body))]
 
-;;           (try
-;;             ;; Read connected event
-;;             (loop [lines []]
-;;               (if-let [line (.readLine reader)]
-;;                 (when-not (str/blank? line)
-;;                   (recur (conj lines line)))
-;;                 nil))
+          (try
+            ;; Read connected event
+            (loop [lines []]
+              (if-let [line (.readLine reader)]
+                (when-not (str/blank? line)
+                  (println "got a line here" line)
+                  (recur (conj lines line)))
+                nil))
 
-;;             ;; Close the connection
-;;             (.close reader)
+            ;; Close the connection
+            (.close reader)
 
-;;             ;; Verify reader is closed by trying to read (should throw or return nil)
-;;             (is (thrown? java.io.IOException (.readLine reader)))
+            ;; Verify reader is closed by trying to read (should throw or return nil)
+            (is (thrown? java.io.IOException (.readLine reader)))
 
-;;             (catch Exception _
-;;               ;; If we get an exception during the test, that's fine
-;;               ;; Just make sure we close the reader
-;;               (.close reader))))))))
+            (catch Exception _
+              ;; If we get an exception during the test, that's fine
+              ;; Just make sure we close the reader
+              (.close reader))))))))
 
-(comment
-  (t/run-test sse-connection-cleanup-test)
-  (t/run-tests)
-
-  ;
-  )
 
 ;; ;; =============================================================================
 ;; ;; Simple Collection Tests (Alternative approach)
 ;; ;; =============================================================================
 
-;; (deftest simple-websocket-collection-test
-;;   (testing "Collect multiple WebSocket messages using helper function"
-;;     (let [messages (collect-ws-messages
-;;                     "ws://localhost:3456/api/realtime/ws/echo"
-;;                     1
-;;                     2000)]
-;;       ;; Should get welcome message
-;;       (is (= 1 (count messages)))
-;;       (is (= "welcome" (get (first messages) "type"))))))
+(deftest simple-websocket-collection-test
+  (testing "Collect multiple WebSocket messages using helper function"
+    (test-sys/with-system+server
+      (fn [system]
+        (let [server (:nexus.server/server system)
+              host (th/server->ws-host server)
+              messages (collect-ws-messages
+                        (str host "/api/realtime/ws/echo")
+                        1
+                        2000)]
+          ;; Should get welcome message
+          (is (= 1 (count messages)))
+          (is (= "welcome" (get (first messages) "type"))))))))
 
-;; (deftest simple-sse-collection-test
-;;   (testing "Collect SSE events using helper function"
-;;     (let [events (collect-sse-events
-;;                   "http://localhost:3456/api/realtime/sse/events"
-;;                   3
-;;                   7000)]
-;;       ;; Should get connected + 2 counter events
-;;       (is (= 3 (count events)))
-;;       (is (= "connected" (:event (first events))))
-;;       (is (= 0 (get-in (second events) [:data "counter"])))
-;;       (is (= 1 (get-in (nth events 2) [:data "counter"]))))))
+(deftest simple-sse-collection-test
+  (testing "Collect SSE events using helper function"
+    (test-sys/with-system+server
+      (fn [system]
+        (let [server (:nexus.server/server system)
+              host (th/server->http-host server)
+              events (collect-sse-events
+                      (str host "/api/realtime/sse/events")
+                      4
+                      7000)]
+          ;; Should get connected + 3 counter events
+          (is (= 4 (count events)))
+          (is (= "connected" (:event (first events))))
+          (is (= 0 (get-in (second events) [:data "counter"])))
+          (is (= 1 (get-in (nth events 2) [:data "counter"])))
+          (is (= 2 (get-in (nth events 3) [:data "counter"]))))))))
 
+(comment
+  (t/run-test simple-sse-collection-test)
+  (t/run-tests)
+
+  ;
+  )

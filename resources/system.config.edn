@@ -10,6 +10,9 @@
  ;; Security
  :nexus.auth/jwt {:options {:jwt-secret #ref [:nexus.system/env :jwt-secret]}}
 
+ ;; Realtime
+ :nexus.router.realtime.service/service {}
+
  ;; HTTP Server
  :nexus.server/app {:options {:hot-reload? #profile {:dev true
                                                      :prod false}
@@ -18,8 +21,11 @@
                               :show-error-stacks? #profile {:dev true
                                                             :prod false}}
                     :deps {:db #ig/ref :nexus.db/connection
-                           :jwt #ig/ref :nexus.auth/jwt}}
- :nexus.server/server {:options {:port #ref [:nexus.system/env :port]}
+                           :jwt #ig/ref :nexus.auth/jwt
+                           :stream-service #ig/ref :nexus.router.realtime.service/service}}
+ :nexus.server/server {:options {:port #ref [:nexus.system/env :port]
+                                 :shutdown-timeout #profile {:dev 0
+                                                             :prod 15}}
                        :deps {:app #ig/ref :nexus.server/app}}
  ;;
  }

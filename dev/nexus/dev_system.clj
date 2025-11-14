@@ -41,6 +41,10 @@
 (defn services:jwt
   []
   (:nexus.auth/jwt (system)))
+(defn services:stream
+  "Returns the stream service for managing SSE/WebSocket connections"
+  []
+  (:nexus.router.realtime.service/service (system)))
 ;; Acessors
 
 
@@ -80,6 +84,7 @@
   (server:handler)
   (server:router)
   (services:jwt)
+  (services:stream)
   ;; Common acessors
   )
 

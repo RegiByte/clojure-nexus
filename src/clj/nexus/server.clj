@@ -1,5 +1,8 @@
 (ns nexus.server
   (:require
+   [aleph.http :as http]
+   [aleph.netty :as netty]
+   [clojure.java.io :as io]
    [clojure.stacktrace :as stacktrace]
    [clojure.string :as str]
    [integrant.core :as ig]
@@ -9,11 +12,10 @@
    [nexus.auth.middleware :as auth-middleware]
    [nexus.errors :as errors]
    [nexus.router.core :refer [routes]]
+   [nexus.router.realtime.service :as stream-svc]
    [reitit.coercion.malli :as malli-coercion]
    [reitit.dev.pretty :as pretty]
    [reitit.openapi :as openapi]
-   [aleph.http :as http]
-   [manifold.deferred :as d]
    [reitit.ring :as ring]
    [reitit.ring.coercion :as coercion]
    [reitit.ring.middleware.exception :as exception]
@@ -21,14 +23,12 @@
    [reitit.ring.middleware.muuntaja :as muuntaja]
    [reitit.ring.middleware.parameters :as parameters]
    [reitit.swagger-ui :as swagger-ui]
-   [ring.adapter.jetty :as jetty]
    [ring.middleware.content-type :as content-type]
    [ring.middleware.cookies :as ring-cookies]
    [ring.middleware.cors :as cors]
    [ring.middleware.default-charset :as default-charset]
    [ring.middleware.x-headers :as x-headers]
-   [taoensso.telemere :as tel]
-   [clojure.java.io :as io]))
+   [taoensso.telemere :as tel]))
 
 
 ;; Error Handling
@@ -352,13 +352,15 @@
   (tel/log! {:data {:options options}
              :level :info} "initializing server")
   (http/start-server (-> deps :app :handler)
-                     {
-                      ;; :join? false
+                     {;; :join? false
                       ;; :max-idle-time 30000
                       :host "0.0.0.0"
-                      :port (:port options)
-                      ;; Aleph-specific settings
 
+                      :port (:port options)
+                      :shutdown-timeout (or (:shutdown-timeout options)
+                                            15 ; defaults to 15 secs 
+                                            )
+                      ;; Aleph-specific settings
                       }))
 
 (defmethod ig/halt-key! ::server [_ server]
@@ -367,4 +369,5 @@
    This is called by Integrant when stopping :nexus.server/server.
    Ensures graceful shutdown of the HTTP server."
   (tel/log! :info "stopping server")
-  (.close server))
+  (.close server)
+  (netty/wait-for-close server))

@@ -1,8 +1,7 @@
-(ns nexus.test.users.integration
+(ns nexus.test.users.integration-test
   (:require
    [clj-http.client :as http]
    [clojure.test :as t :refer [deftest is testing use-fixtures]]
-   [jsonista.core :as json]
    [nexus.shared.strings :as strings]
    [nexus.test.helpers :as th]
    [nexus.test.test-system :as test-system]))
