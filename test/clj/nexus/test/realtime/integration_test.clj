@@ -223,16 +223,7 @@
               response @(http/get (str host "/api/realtime/sse/events")
                                   {:as :stream})
               body (:body response)
-              input-reader (InputStreamReader. body)
-              buffered-reader (BufferedReader. input-reader)]
-          (println "type of response" (type response))
-          (println "type of body" (type body))
-          (println "type of reader" (type buffered-reader))
-          (println "body closeable?" (closeable? body))
-          (println "response closeable?" (closeable? response))
-          (println "input-reader closeable?" (closeable? input-reader))
-          (println "buffered-reader closeable?" (closeable? buffered-reader))
-
+              buffered-reader (BufferedReader. (InputStreamReader. body))]
           (try
             ;; Verify response headers
             (is (str/starts-with? (get-in response [:headers "content-type"]) "text/event-stream"))
@@ -269,14 +260,15 @@
                 (is (= 2 (get-in event [:data "counter"])))))
 
             (finally
-              (println "closing reader")
               (when (closeable? buffered-reader)
-                (.close buffered-reader))
-              (when (closeable? input-reader)
-                (.close input-reader))
-              (when (closeable? body)
-                (println "closing body!!")
-                (.close body)))))))))
+                (.close buffered-reader)))))))))
+
+(comment
+  (t/run-test sse-counter-test)
+  (t/run-tests)
+
+  ;
+  )
 
 (deftest sse-multi-event-test
   (testing "SSE multi-event endpoint sends different event types"

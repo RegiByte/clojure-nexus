@@ -11,7 +11,7 @@
    [nexus.users.service :as users]
    [reitit.core :as reitit]
    [taoensso.telemere :as tel] ; Use telemery as default logger
-))
+   ))
 
 
 (do
@@ -197,6 +197,9 @@
 
   ;; Check active streams
   (stream-svc/get-active-streams (services:stream))
+  (stream-svc/get-active-streams-by-channel (services:stream) :broadcast-channel)
+  (stream-svc/get-active-streams-by-type (services:stream) :sse)
+  (stream-svc/get-active-streams-by-type (services:stream) :websocket)
   (stream-svc/stream-count (services:stream))
 
   ;; Close a specific stream (get ID from browser console or logs)

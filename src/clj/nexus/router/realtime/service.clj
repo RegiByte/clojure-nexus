@@ -17,39 +17,42 @@
         info {:type :sse
               :stream stream
               :created-at (System/currentTimeMillis)}]
-    
+
     ;; Track the stream
     (swap! service assoc stream-id info)
-    
+
     ;; Auto-cleanup on close
     (s/on-closed stream
                  (fn []
                    (swap! service dissoc stream-id)
                    (tel/log! :debug ["SSE stream auto-cleanup" {:stream-id stream-id}])))
-    
+
     {:stream-id stream-id
      :stream stream}))
 
 (defn create-ws-stream!
   "Creates a new WebSocket stream and tracks it in the service atom.
    Returns {:stream-id id :conn conn}"
-  [service conn]
-  (let [stream-id (str (java.util.UUID/randomUUID))
-        info {:type :websocket
-              :conn conn
-              :created-at (System/currentTimeMillis)}]
-    
-    ;; Track the connection
-    (swap! service assoc stream-id info)
-    
-    ;; Auto-cleanup on close
-    (s/on-closed conn
-                 (fn []
-                   (swap! service dissoc stream-id)
-                   (tel/log! :debug ["WebSocket stream auto-cleanup" {:stream-id stream-id}])))
-    
-    {:stream-id stream-id
-     :conn conn}))
+  ([service conn]
+   (create-ws-stream! service conn :main-channel))
+  ([service conn channel]
+   (let [stream-id (str (java.util.UUID/randomUUID))
+         info {:type :websocket
+               :conn conn
+               :channel channel
+               :created-at (System/currentTimeMillis)}]
+
+     ;; Track the connection
+     (swap! service assoc stream-id info)
+
+     ;; Auto-cleanup on close
+     (s/on-closed conn
+                  (fn []
+                    (swap! service dissoc stream-id)
+                    (tel/log! :debug ["WebSocket stream auto-cleanup" {:stream-id stream-id}])))
+
+     {:stream-id stream-id
+      :conn conn})))
 
 (defn close-stream!
   "Closes a specific stream by ID"
@@ -80,20 +83,49 @@
   [service]
   @service)
 
+(defn active-streams-where
+  "Filters active streams based on a predicate
+   Precicate is called with a tuple of arguments"
+  [service predicate]
+  (into {} (filter
+            (fn [[id info]]
+              (predicate (assoc info :id id))) @service)))
+
+(defn get-active-streams-by-channel
+  "Returns map of active stream IDs to their info"
+  [service looking-for]
+  (active-streams-where service #(= (:channel %) looking-for)))
+
+(defn get-active-streams-by-type
+  "Returns map of active stream IDs to their info"
+  [service looking-for]
+  (active-streams-where service #(= (:type %) looking-for)))
+
+(defn count-streams
+  "Counts the values in the stream-infos map, use to compose with the finders above
+   E.g (count-streams (get-active-streams-by-type service :websocket))"
+  [stream-infos]
+  (count (vals stream-infos)))
+
 (defn stream-count
-  "Returns count of active streams"
-  [service]
-  (count @service))
+  "Returns count of active streams.
+   Optionally filter by `stream-type` (e.g. :websocket or :sse)."
+  ([service]
+   (count @service))
+  ([service stream-type]
+   (count (for [[_ {:keys [type]}] @service
+                :when (= stream-type type)]
+            type))))
 
 ;; =============================================================================
 ;; Integrant Lifecycle
 ;; =============================================================================
 
 (defmethod ig/init-key ::service [_ _opts]
-  (tel/log! :info "Initializing stream service")
+  (tel/log! :debug "Initializing stream service")
   (atom {}))
 
 (defmethod ig/halt-key! ::service [_ service]
-  (tel/log! :info "Halting stream service")
+  (tel/log! :debug "Halting stream service")
   (close-all-streams! service))
 

@@ -2,6 +2,7 @@
   (:require
    [aleph.http :as http]
    [jsonista.core :as json]
+   [manifold.deferred :as d]
    [manifold.stream :as s]
    [nexus.router.realtime.service :as stream-svc]
    [taoensso.telemere :as tel]))
@@ -14,6 +15,25 @@
   "Format data as SSE event"
   [data]
   (str "data: " (json/write-value-as-string data) "\n\n"))
+
+(defn put-text!
+  "Asynchronously push a text payload to a stream, logging failures."
+  ([stream text log-context]
+   (d/on-realized
+    (s/put! stream text)
+    (constantly nil)
+    (fn [err]
+      (tel/log! :warn ["Failed to deliver realtime payload"
+                       (assoc log-context :error err)]))))
+  ([stream text]
+   (put-text! stream text {})))
+
+(defn put-json!
+  "Serialize payload to JSON and put onto stream asynchronously."
+  ([stream payload log-context]
+   (put-text! stream (json/write-value-as-string payload) log-context))
+  ([stream payload]
+   (put-json! stream payload {})))
 
 (defn sse-handler
   "Creates an SSE endpoint that sends periodic updates to clients.
@@ -33,12 +53,13 @@
                              :timestamp (System/currentTimeMillis)})))]
 
     ;; Send initial messages asynchronously (don't block the handler)
-    (future
-      (s/put! stream "event: connected\n")
-      (s/put! stream (format-sse-event {:message "Connected to SSE stream"
-                                        :stream-id stream-id}))
-      ;; Connect periodic stream after initial messages
-      (s/connect periodic-stream stream))
+    (d/chain (s/put! stream "event: connected\n")
+             (fn [_]
+               (s/put! stream (format-sse-event {:message "Connected to SSE stream"
+                                                 :stream-id stream-id})))
+             (fn [_]
+               ;; Connect periodic stream after initial messages
+               (s/connect periodic-stream stream)))
 
     ;; Set up cleanup - close the periodic stream when connection closes
     (s/on-closed stream
@@ -82,12 +103,13 @@
                                                    "\n\n")))))]
 
     ;; Send initial messages asynchronously (don't block the handler)
-    (future
-      (s/put! stream "event: connected\n")
-      (s/put! stream (format-sse-event {:message "Connected to multi-event stream"
-                                        :stream-id stream-id}))
-      ;; Connect periodic stream after initial messages
-      (s/connect periodic-stream stream))
+    (d/chain (s/put! stream "event: connected\n")
+             (fn [_]
+               (s/put! stream (format-sse-event {:message "Connected to multi-event stream"
+                                                 :stream-id stream-id})))
+             (fn [_]
+               ;; Connect periodic stream after initial messages
+               (s/connect periodic-stream stream)))
 
     ;; Set up cleanup - close the periodic stream when connection closes
     (s/on-closed stream
@@ -114,27 +136,31 @@
   [request]
   (let [stream-service (get-in request [:context :stream-service])
         conn @(http/websocket-connection request)
-        {:keys [stream-id]} (stream-svc/create-ws-stream! stream-service conn)]
+        {:keys [stream-id]} (stream-svc/create-ws-stream! stream-service conn :echo-channel)
+        send! (fn [payload]
+                (put-json! conn payload {:stream-id stream-id :handler :echo}))]
     (tel/log! :info ["WebSocket echo connection established" {:stream-id stream-id}])
 
     ;; Send welcome message
-    @(s/put! conn (json/write-value-as-string {:type "welcome" 
-                                                :message "Welcome to WebSocket!"
-                                                :stream-id stream-id}))
+    (send! {:type "welcome"
+            :message "Welcome to WebSocket!"
+            :stream-id stream-id})
 
-    ;; Echo messages in a background thread
-    (future
-      (try
-        (loop []
-          (when-let [msg @(s/take! conn)]
-            (tel/log! :debug ["WebSocket received" {:message msg :stream-id stream-id}])
-            @(s/put! conn (json/write-value-as-string {:type "echo" :message msg}))
-            (recur)))
-        (catch Exception e
-          (tel/log! :error ["WebSocket error" {:error e :stream-id stream-id}]))
-        (finally
-          (tel/log! :info ["WebSocket echo connection closed" {:stream-id stream-id}])
-          (s/close! conn))))
+    ;; Echo messages without blocking dedicated threads
+    (s/consume
+     (fn [msg]
+       (when (some? msg)
+         (try
+           (tel/log! :debug ["WebSocket received" {:message msg :stream-id stream-id}])
+           (send! {:type "echo" :message msg})
+           (catch Exception e
+             (tel/log! :error ["WebSocket error" {:stream-id stream-id :error e}])
+             (s/close! conn)))))
+     conn)
+
+    (s/on-closed conn
+                 (fn []
+                   (tel/log! :info ["WebSocket echo connection closed" {:stream-id stream-id}])))
 
     nil))
 
@@ -146,45 +172,58 @@
   [request]
   (let [stream-service (get-in request [:context :stream-service])
         conn @(http/websocket-connection request)
-        {:keys [stream-id]} (stream-svc/create-ws-stream! stream-service conn)
-        
+        {:keys [stream-id]} (stream-svc/create-ws-stream! stream-service conn :broadcast-channel)
+        send! (fn [payload]
+                (put-json! conn payload {:stream-id stream-id :handler :broadcast}))
         ;; Helper to broadcast to all connected WebSocket clients
         broadcast-to-all! (fn [message-data]
-                            (let [json-msg (json/write-value-as-string message-data)
-                                  active-streams (stream-svc/get-active-streams stream-service)]
-                              (doseq [[_ info] active-streams]
-                                (when (and (= :websocket (:type info))
-                                           (not (s/closed? (:conn info))))
-                                  @(s/put! (:conn info) json-msg)))))]
-    
+                            (let [json-msg (json/write-value-as-string message-data)]
+                              (doseq [[client-id info] (stream-svc/get-active-streams-by-channel
+                                                        stream-service
+                                                        :broadcast-channel)]
+                                (let [{:keys [type conn]} info
+                                      ws-conn conn]
+                                  (when (and (= :websocket type)
+                                             (not (s/closed? ws-conn)))
+                                    (put-text! ws-conn json-msg {:stream-id client-id
+                                                                 :handler :broadcast}))))))]
+
     (tel/log! :info ["WebSocket broadcast connection established" {:stream-id stream-id}])
 
     ;; Send welcome message to this client
-    @(s/put! conn (json/write-value-as-string {:type "system" 
-                                                :message "Connected to broadcast channel"
-                                                :stream-id stream-id}))
+    (send! {:type "system"
+            :message "Connected to broadcast channel"
+            :stream-id stream-id})
 
     ;; Notify all clients about new connection
-    (let [client-count (stream-svc/stream-count stream-service)]
+    (let [client-count (stream-svc/count-streams
+                        (stream-svc/get-active-streams-by-channel
+                         stream-service
+                         :broadcast-channel))]
       (tel/log! :info ["User joined" {:client-count client-count :stream-id stream-id}])
       (broadcast-to-all! {:type "system" :message (str "User joined. Total clients: " client-count)}))
 
-    ;; Listen for messages in background thread
-    (future
-      (try
-        (loop []
-          (when-let [msg @(s/take! conn)]
-            (tel/log! :debug ["Broadcasting" {:message msg :stream-id stream-id}])
-            (broadcast-to-all! {:type "broadcast" :message msg})
-            (recur)))
-        (catch Exception e
-          (tel/log! :error ["Broadcast error" {:error e :stream-id stream-id}]))
-        (finally
-          ;; Clean up when client disconnects
-          (let [client-count (stream-svc/stream-count stream-service)]
-            (tel/log! :info ["User left" {:client-count client-count :stream-id stream-id}])
-            (broadcast-to-all! {:type "system" :message (str "User left. Total clients: " client-count)}))
-          (s/close! conn))))
+    ;; Listen for messages without dedicating a thread per connection
+    (s/consume
+     (fn [msg]
+       (when (some? msg)
+         (try
+           (tel/log! :debug ["Broadcasting" {:message msg :stream-id stream-id}])
+           (broadcast-to-all! {:type "broadcast" :message msg})
+           (catch Exception e
+             (tel/log! :error ["Broadcast error" {:error e :stream-id stream-id}])
+             (s/close! conn)))))
+     conn)
+
+    (s/on-closed conn
+                 (fn []
+                   (let [client-count (stream-svc/count-streams
+                                       (stream-svc/get-active-streams-by-channel
+                                        stream-service
+                                        :broadcast-channel))]
+                     (tel/log! :info ["User left" {:client-count client-count :stream-id stream-id}])
+                     (broadcast-to-all! {:type "system"
+                                         :message (str "User left. Total clients: " client-count)}))))
 
     nil))
 
